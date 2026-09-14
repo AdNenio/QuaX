@@ -150,6 +150,53 @@ class TweetCard extends StatelessWidget {
     );
   }
 
+  Widget _createGrokShareCard(BuildContext context, Map<String, dynamic> unifiedCard) {
+    var data = unifiedCard['component_objects']['details_1']['data'];
+    String uri = unifiedCard['destination_objects'][data['destination']]['data']['url_data']['url'];
+    String userMsg = data['conversation_preview']
+        .where((e) => e['sender'] == 'USER')
+        .map((e) => e['message'])
+        .firstWhere((_) => true, orElse: () => '');
+    String grokMsg = data['conversation_preview']
+        .where((e) => e['sender'] == 'AGENT')
+        .map((e) => e['message'])
+        .firstWhere((_) => true, orElse: () => '')
+        .replaceAll(RegExp(r'<grok:render[^>]*>.*?</grok:render>', dotAll: true), '');
+    return _createCard(uri, Container(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            child: Text(
+              userMsg,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: Theme.of(context)
+                  .textTheme.titleMedium!.copyWith(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            child: Text(
+              "Grok",
+              style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w300),
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            child: Text(
+              grokMsg,
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Colors.white, fontSize: 12),
+            ),
+          ),
+        ],
+      ),), context);
+  }
+
   Container _createVoteBar(BuildContext context, Map<String, dynamic> card, double total, int choiceIndex) {
     var choiceCount = double.parse(card['binding_values']['choice${choiceIndex}_count']['string_value']);
     var choicePercent = total == 0 ? 0 : (100 / total) * choiceCount;
@@ -223,7 +270,7 @@ class TweetCard extends StatelessWidget {
   }
 
   dynamic _createUnifiedCard(BuildContext context, Map<String, dynamic> card, String imageKey, String imageSize) {
-    final unifiedCard = _extractUnifiedCard(card['binding_values']);
+    final Map<String, dynamic>? unifiedCard = _extractUnifiedCard(card['binding_values']);
 
     if (unifiedCard == null) {
       return _createUnsupportedCard(context);
@@ -259,6 +306,14 @@ class TweetCard extends StatelessWidget {
             .toList();
         TweetMedia child = TweetMedia(media: mediaObjects, username: tweet.user!.screenName!, sensitive: false);
         return _createWebsiteCard(context, unifiedCard, uri, imageSize, child);
+      case null:
+        // some cards don't have a type, we have to search for it in the component_objects.
+        // we can have unifiedCard['component_object']['details_1'], with ['type'] and ['data']
+        if (unifiedCard['component_objects']?['details_1']?['type'] == 'grok_share'){
+          // grok response embed, eg https://x.com/elonmusk/status/2098507671083036843
+          return _createGrokShareCard(context, unifiedCard);
+        }
+        return _createUnsupportedCard(context);
       default:
         return _createUnsupportedCard(context);
     }
@@ -426,7 +481,7 @@ class TweetCard extends StatelessWidget {
           return _createUnifiedCard(context, card, imageKey, imageSize);
         } catch (e) {
           log.severe('Unable to render the unified card');
-          return Container();
+          return _createUnsupportedCard(context);
         }
       case '745291183405076480:live_event':
         // https://twitter.com/Erdoanz11/status/1573765738032152577
