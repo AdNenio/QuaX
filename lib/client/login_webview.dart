@@ -98,7 +98,8 @@ class _TwitterLoginWebviewState extends State<TwitterLoginWebview> {
                       TextButton(
                         onPressed: () {
                           Navigator.pop(context);
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionImportScreen()));
+                          Navigator.push(context,
+                              MaterialPageRoute(builder: (_) => SubscriptionImportScreen(screenName: screenName)));
                         },
                         child: Text(L10n.of(context).yes),
                       ),

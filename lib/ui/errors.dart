@@ -258,7 +258,7 @@ Future<void> reportBug(BuildContext context,
   await openUri(context, uri.toString());
 }
 
-enum _PrimaryAction { report, addAccount }
+enum _PrimaryAction { report, addAccount, retry }
 
 typedef _CardContent = ({IconData icon, String title, String details, _PrimaryAction? primary});
 
@@ -298,17 +298,25 @@ class ErrorCard extends StatelessWidget {
           details: l10n.no_account_available_message,
           primary: _PrimaryAction.addAccount,
         ),
-      RateLimitedException() => (
+      FeedRateLimitedException(:final availableAt, :final loaded, :final total) => (
           icon: Icons.hourglass_empty,
-          title: l10n.rate_limited_title,
+          title: l10n.feed_rate_limited_title,
+          details: availableAt == null
+              ? l10n.feed_rate_limited_message(loaded.toString(), total.toString())
+              : l10n.feed_rate_limited_until_message(_time(availableAt), loaded.toString(), total.toString()),
+          primary: _PrimaryAction.addAccount,
+        ),
+      RateLimitedException(:final availableAt) => (
+          icon: Icons.hourglass_empty,
+          title: availableAt == null ? l10n.rate_limited_title : l10n.rate_limited_until_title(_time(availableAt)),
           details: l10n.rate_limited_message,
           primary: _PrimaryAction.addAccount,
         ),
-      NoWorkingAccountException() => (
-          icon: Icons.person_off,
-          title: l10n.no_working_account_title,
-          details: l10n.no_working_account_message,
-          primary: _PrimaryAction.addAccount,
+      NotFoundException() => (
+          icon: Icons.search_off,
+          title: l10n.not_found_title,
+          details: l10n.not_found_message,
+          primary: _PrimaryAction.retry,
         ),
       TwitterError() => (
           icon: Icons.error_outline,
@@ -326,19 +334,22 @@ class ErrorCard extends StatelessWidget {
     };
   }
 
+  String _time(DateTime dateTime) => DateFormat.jm().format(dateTime.toLocal());
+
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
     final content = _content(l10n);
     final onRetry = this.onRetry;
+    final primary = content.primary == _PrimaryAction.retry && onRetry == null ? null : content.primary;
 
     return StatusCard(icon: content.icon, title: content.title, details: content.details, actions: [
-      if (onRetry != null)
+      if (onRetry != null && primary != _PrimaryAction.retry)
         TextButton(
           onPressed: () => onRetry(),
           child: Text(retryText ?? l10n.retry),
         ),
-      if (content.primary != null) _primaryButton(context, content.primary!),
+      if (primary != null) _primaryButton(context, primary),
     ]);
   }
 
@@ -353,6 +364,10 @@ class ErrorCard extends StatelessWidget {
       _PrimaryAction.addAccount => FilledButton(
           onPressed: () => openAddAccount(context),
           child: Text(l10n.add_account),
+        ),
+      _PrimaryAction.retry => FilledButton(
+          onPressed: () => onRetry?.call(),
+          child: Text(retryText ?? l10n.retry),
         ),
     };
   }

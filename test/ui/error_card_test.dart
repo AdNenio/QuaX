@@ -32,6 +32,45 @@ void main() {
         reason: 'The rate limit title explains the problem better than the generic message');
   });
 
+  testWidgets('Should tell how much of a feed could load when some of its searches were rate limited', (tester) async {
+    await pumpCard(tester, FeedRateLimitedException(DateTime.now(), loaded: 128, total: 300));
+
+    expect(find.text('The whole feed could not be loaded'), findsOneWidget,
+        reason: 'Part of the feed is shown, so the title should say it is incomplete rather than only rate limited');
+    expect(find.textContaining('Try again at '), findsOneWidget,
+        reason: 'X said when the quota comes back, so the user should know when to retry');
+    expect(find.textContaining('Subscriptions loaded: 128/300'), findsOneWidget,
+        reason: 'The user should see how much of the feed is missing, which hints at too many subscriptions');
+    expect(find.widgetWithText(FilledButton, 'Add account'), findsOneWidget,
+        reason: 'Another account raises the quota, which is what gets the whole feed loaded');
+  });
+
+  testWidgets('Should only offer to retry when X answers 404', (tester) async {
+    await pumpCard(tester, NotFoundException());
+
+    expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget,
+        reason: 'A 404 happens now and then in normal use and retrying is the only useful action, '
+            'so it is the main one');
+    expect(find.widgetWithText(TextButton, 'Retry'), findsNothing, reason: 'Retry should not be offered twice');
+    expect(find.text('Add account'), findsNothing, reason: 'A 404 does not mean the accounts are broken');
+    expect(find.text('Report'), findsNothing, reason: 'A 404 is expected from X, not a bug of the app');
+  });
+
+  testWidgets('Should tell when a rate limit ends, if X told us', (tester) async {
+    await pumpCard(tester, RateLimitedException(DateTime.now().add(const Duration(minutes: 10))));
+
+    expect(find.textContaining('Rate limited by 𝕏 until'), findsOneWidget,
+        reason: 'The title should tell when the quota comes back, so the user can decide between waiting and '
+            'adding an account');
+  });
+
+  testWidgets('Should not tell when a rate limit ends, if X did not say', (tester) async {
+    await pumpCard(tester, RateLimitedException());
+
+    expect(find.text('Rate limited by 𝕏'), findsOneWidget,
+        reason: 'Without a reset time from X there is nothing reliable to show, so the plain title should stay');
+  });
+
   testWidgets('Should look like a tweet, with a bright red icon', (tester) async {
     await pumpCard(tester, StateError('boom'));
 
