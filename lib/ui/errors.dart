@@ -363,12 +363,10 @@ class ErrorCard extends StatelessWidget {
       const SizedBox(width: 12),
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(content.title, style: theme.textTheme.titleSmall),
+          Text(content.title, style: theme.textTheme.titleMedium),
           const SizedBox(height: 6),
-          Text(content.details,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
+          _ExpandableDetails(
+              text: content.details, style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
         ]),
       ),
     ]);
@@ -387,5 +385,56 @@ class ErrorCard extends StatelessWidget {
           child: Text(l10n.add_account),
         ),
     };
+  }
+}
+
+/// Error details clamped to a few lines, which unfold with an animation when tapped
+class _ExpandableDetails extends StatefulWidget {
+  final String text;
+  final TextStyle? style;
+
+  const _ExpandableDetails({required this.text, required this.style});
+
+  @override
+  State<_ExpandableDetails> createState() => _ExpandableDetailsState();
+}
+
+class _ExpandableDetailsState extends State<_ExpandableDetails> {
+  static const _collapsedLines = 2;
+
+  bool _expanded = false;
+
+  bool _overflows(BuildContext context, double maxWidth) {
+    final painter = TextPainter(
+      text: TextSpan(text: widget.text, style: widget.style),
+      maxLines: _collapsedLines,
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout(maxWidth: maxWidth);
+    final overflows = painter.didExceedMaxLines;
+    painter.dispose();
+    return overflows;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, constraints) {
+      final text = Text(widget.text,
+          maxLines: _expanded ? null : _collapsedLines,
+          overflow: _expanded ? null : TextOverflow.ellipsis,
+          style: widget.style);
+      if (!_overflows(context, constraints.maxWidth)) return text;
+
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => setState(() => _expanded = !_expanded),
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: text,
+        ),
+      );
+    });
   }
 }
