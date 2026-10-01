@@ -331,44 +331,13 @@ class ErrorCard extends StatelessWidget {
     final content = _content(l10n);
     final onRetry = this.onRetry;
 
-    return Card(
-      color: tweetCardColor(context),
-      margin: const EdgeInsets.all(12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _texts(context, content),
-            const SizedBox(height: 16),
-            OverflowBar(alignment: MainAxisAlignment.end, spacing: 4, children: [
-              if (onRetry != null)
-                TextButton(
-                  onPressed: () => onRetry(),
-                  child: Text(retryText ?? l10n.retry),
-                ),
-              if (content.primary != null) _primaryButton(context, content.primary!),
-            ]),
-          ],
+    return StatusCard(icon: content.icon, title: content.title, details: content.details, actions: [
+      if (onRetry != null)
+        TextButton(
+          onPressed: () => onRetry(),
+          child: Text(retryText ?? l10n.retry),
         ),
-      ),
-    );
-  }
-
-  Widget _texts(BuildContext context, _CardContent content) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Icon(content.icon, size: 32, color: Colors.red.harmonizeWith(colors.primary)),
-      const SizedBox(width: 12),
-      Expanded(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(content.title, style: theme.textTheme.titleMedium),
-          const SizedBox(height: 6),
-          _ExpandableDetails(
-              text: content.details, style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
-        ]),
-      ),
+      if (content.primary != null) _primaryButton(context, content.primary!),
     ]);
   }
 
@@ -385,6 +354,60 @@ class ErrorCard extends StatelessWidget {
           child: Text(l10n.add_account),
         ),
     };
+  }
+}
+
+/// Card with a red icon, a title, details and actions, shared by errors and unavailable posts
+class StatusCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String details;
+  final List<Widget> actions;
+  final EdgeInsetsGeometry margin;
+
+  const StatusCard(
+      {super.key,
+      required this.icon,
+      required this.title,
+      required this.details,
+      required this.actions,
+      this.margin = const EdgeInsets.all(12)});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: tweetCardColor(context),
+      margin: margin,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _texts(context),
+            if (actions.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              OverflowBar(alignment: MainAxisAlignment.end, spacing: 4, children: actions),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _texts(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Icon(icon, size: 32, color: Colors.red.harmonizeWith(colors.primary)),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, style: theme.textTheme.titleMedium),
+          const SizedBox(height: 6),
+          _ExpandableDetails(text: details, style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
+        ]),
+      ),
+    ]);
   }
 }
 

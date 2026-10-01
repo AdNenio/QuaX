@@ -116,6 +116,19 @@ void main() {
     }
   });
 
+  group('Unavailable posts', () {
+    test('Should keep a deleted post opened directly as an unavailable post', () {
+      final fixture = fixturesOf('TweetDetail').firstWhere((f) => f.path.endsWith('2095934459606376826.json'));
+      final chains = Twitter.parseTweetDetail(fixture.body).chains;
+
+      expect(chains.map((chain) => chain.id), ['2095934459606376826'],
+          reason: 'X sends an empty entry for the opened post, which should still be listed, '
+              'otherwise the screen says the user has no posts');
+      expect(chains.single.tweets.single.isTombstone, isTrue,
+          reason: 'The empty entry should show as an unavailable post');
+    });
+  });
+
   group('TweetDetail', () {
     for (final fixture in fixturesOf('TweetDetail')) {
       test(fixture.scenario, () {

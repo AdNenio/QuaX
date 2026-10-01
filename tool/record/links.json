@@ -158,6 +158,8 @@
       "url": "https://x.com/quax_tests_2/status/2095934584533680451",
       "description": "Quote of a deleted tweet: the quoted result comes back unavailable"
     },
+    { "url": "https://x.com/quax_tests/status/2095934459606376826",
+      "description": "Deleted post opened directly" },
     {
       "url": "https://x.com/quax_tests_2/status/2095951992489152745",
       "description": "Quote of a tweet with limited replies: TweetWithVisibilityResults, unwrapped twice"

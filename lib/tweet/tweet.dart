@@ -18,11 +18,13 @@ import 'package:quax/status.dart';
 import 'package:quax/tweet/_expandable_tweet_text.dart';
 import 'package:quax/tweet/_card.dart';
 import 'package:quax/tweet/_media.dart';
+import 'package:quax/tweet/unavailable_tweet.dart';
 import 'package:quax/article/article.dart';
 import 'package:quax/ui/dates.dart';
 import 'package:quax/ui/errors.dart';
 import 'package:quax/user.dart';
 import 'package:quax/utils/rich_text.dart';
+import 'package:quax/utils/urls.dart';
 import 'package:quax/utils/translation.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
@@ -418,15 +420,14 @@ class TweetTileState extends State<TweetTile> with SingleTickerProviderStateMixi
     return newHsl.toColor();
   }
 
-  Widget _buildErrorTweet(String text) {
-    // create the layout of tombstones (deleted tweets) and other possible errors that we want to display as a tweet
-    return SizedBox(
-      width: double.infinity,
-      child: Card(
-        child: Container(
-            padding: const EdgeInsets.all(16),
-            child: Text(text, style: const TextStyle(fontStyle: FontStyle.italic))),
-      ),
+  Widget _buildUnavailableQuote(TweetWithCard tweet) {
+    final permalink = Uri.tryParse(tweet.quotedStatusPermalink?.expanded ?? '');
+    final screenName = permalink == null ? null : parsePostLink(permalink)?.screenName;
+    return UnavailableTweetCard(
+      reason: tweet.quotedStatusWithCard?.text,
+      screenName: screenName,
+      id: tweet.quotedStatusIdStr,
+      margin: EdgeInsets.zero,
     );
   }
 
@@ -464,7 +465,7 @@ class TweetTileState extends State<TweetTile> with SingleTickerProviderStateMixi
     var theme = Theme.of(context);
 
     if (tweet.isTombstone ?? false) {
-      return _buildErrorTweet(tweet.text!);
+      return UnavailableTweetCard(reason: tweet.text);
     }
 
     Widget media = Container();
@@ -593,29 +594,16 @@ class TweetTileState extends State<TweetTile> with SingleTickerProviderStateMixi
 
     // don't display a nested quoted tweet if we are already building a quoted tweet
     if (!isQuotedTweet && (tweet.isQuoteStatus ?? false)) {
-      Widget quotedContent;
-      if (tweet.quotedStatusWithCard != null) {
-        // if we got the full tweet in the reply
-        quotedContent = TweetTile(
-            clickable: true,
-            tweet: tweet.quotedStatusWithCard!,
-            currentUsername: currentUsername,
-            addSeparator: false,
-            isQuotedTweet: true,
-          );
-      } else if (tweet.quotedStatusIdStr != null) {
-        // If twitter did not gave us the full tweet for some reason, we show a clickable tile to the tweet
-        // There always seem to be an actual link to the quoted tweet that we can display (showing username + id)
-        String? msg = tweet.quotedStatusPermalink?.display ?? 'View quoted tweet'; // Just in case, add a default String
-        quotedContent = GestureDetector(
-            onTap: () => Navigator.pushNamed(context, routeStatus,
-                arguments: StatusScreenArguments(id: tweet.quotedStatusIdStr!, username: null)),
-            child: _buildErrorTweet(msg)
-        );
-      } else {
-        // If we have a quote tweet we should at least have quotedStatusIdStr, but just in case twitter is being weird
-        quotedContent = _buildErrorTweet('Could not retrieve quoted tweet');
-      }
+      final quoted = tweet.quotedStatusWithCard;
+      final Widget quotedContent = quoted != null && !(quoted.isTombstone ?? false)
+          ? TweetTile(
+              clickable: true,
+              tweet: quoted,
+              currentUsername: currentUsername,
+              addSeparator: false,
+              isQuotedTweet: true,
+            )
+          : _buildUnavailableQuote(tweet);
       quotedTweet = Container(
         decoration: BoxDecoration(
         border: Border.all(color: theme.colorScheme.surfaceBright.withAlpha(180)),

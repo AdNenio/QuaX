@@ -415,24 +415,18 @@ class Twitter {
     for (var entry in addEntries) {
       var entryId = entry['entryId'] as String;
       if (entryId.startsWith('tweet-')) {
-        dynamic result;
-        final tweetResults = entry['content']['itemContent']['tweet_results'];
+        final tweetResult = entry['content']?['itemContent']?['tweet_results']?['result'];
+        final result =
+            tweetResult?['__typename'] == 'TweetWithVisibilityResults' ? tweetResult['tweet'] : tweetResult;
 
-        // This may happen for tweets that x.com cannot open neither
-        if (!tweetResults.containsKey("result")) continue;
-
-        if (tweetResults['result']["__typename"] == "TweetWithVisibilityResults") {
-          result = tweetResults['result']['tweet'];
-        } else {
-          result = tweetResults['result'];
-        }
-
-        if (result != null && result.containsKey('rest_id')) {
+        if (result?['rest_id'] != null) {
           replies.add(
             TweetChain(id: result['rest_id'], tweets: [TweetWithCard.fromGraphqlJson(result)], isPinned: false),
           );
         } else {
-          replies.add(TweetChain(id: entryId.substring(6), tweets: [TweetWithCard.tombstone({})], isPinned: false));
+          // Deleted posts come as an empty result, so no reason is given
+          replies.add(TweetChain(
+              id: entryId.substring(6), tweets: [TweetWithCard.tombstone(result?['tombstone'] ?? {})], isPinned: false));
         }
       }
 
@@ -1152,9 +1146,7 @@ class TweetWithCard extends Tweet {
     var tweetWithCard = TweetWithCard();
     tweetWithCard.idStr = '';
     tweetWithCard.isTombstone = true;
-    tweetWithCard.text =
-        ((e['richText']?['text'] ?? e['text']?['text'] ?? L10n.current.this_tweet_is_unavailable) as String)
-            .replaceFirst(' Learn more', '');
+    tweetWithCard.text = (e['richText']?['text'] ?? e['text']?['text'] as String?)?.replaceFirst(' Learn more', '');
 
     return tweetWithCard;
   }
