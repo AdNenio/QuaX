@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:quax/client/client.dart';
 import 'package:quax/status.dart';
@@ -276,14 +277,16 @@ void main() {
   });
 
   group('Polls', () {
+    Finder pollShare(String label) => find.ancestor(of: find.text(label), matching: find.byType(Row));
+
     testWidgets('Should show a poll with two options and its results', (tester) async {
       const id = '2095918053468848131';
       await openPost(tester, id);
 
       expect(visibleText(id), 'What is your favorite color ?', reason: 'The poll question should be shown');
-      expect(find.text('100.0% Red', findRichText: true), findsOneWidget,
+      expect(find.descendant(of: pollShare('Red').first, matching: find.text('100.0%')), findsOneWidget,
           reason: 'Each option should show its label and its share of the votes');
-      expect(find.text('0.0% Blue', findRichText: true), findsOneWidget,
+      expect(find.descendant(of: pollShare('Blue').first, matching: find.text('0.0%')), findsOneWidget,
           reason: 'An option nobody chose should still be shown');
       expect(find.textContaining('One vote', findRichText: true), findsOneWidget,
           reason: 'The total number of votes should be shown');
@@ -295,9 +298,10 @@ void main() {
       await openPost(tester, id);
 
       expect(visibleText(id), 'This is the poll with 4 choices', reason: 'The poll question should be shown');
-      for (final option in ['0.0% opt 1', '100.0% opt 2', '0.0% opt 3', '0.0% opt 4']) {
-        expect(find.text(option, findRichText: true), findsOneWidget,
-            reason: 'Every option should show its label and share: $option');
+      final shares = {'opt 1': '0.0%', 'opt 2': '100.0%', 'opt 3': '0.0%', 'opt 4': '0.0%'};
+      for (final MapEntry(key: label, value: share) in shares.entries) {
+        expect(find.descendant(of: pollShare(label).first, matching: find.text(share)), findsOneWidget,
+            reason: 'Every option should show its label and share: $label');
       }
     });
   });
