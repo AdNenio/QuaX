@@ -15,6 +15,7 @@ import 'package:quax/tweet/_media.dart';
 import 'package:quax/tweet/conversation.dart';
 import 'package:quax/tweet/tweet.dart';
 import 'package:quax/tweet/tweet_context_scope.dart';
+import 'package:quax/tweet/video_controller_pool.dart';
 
 import '../fixture_client.dart';
 import '../fixtures.dart';
@@ -26,6 +27,7 @@ Widget withAppModels(Widget child) => MultiProvider(
         ChangeNotifierProvider(create: (_) => ImportDataModel()),
         Provider(create: (_) => LikedTweetModel()),
         Provider(create: (_) => SavedTweetModel()),
+        Provider(create: (_) => VideoControllerPool(maxSize: 2)),
         Provider(create: (context) => GroupsModel(PrefService.of(context, listen: false))),
         Provider(
             create: (context) =>

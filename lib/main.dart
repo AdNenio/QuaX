@@ -16,6 +16,7 @@ import 'package:quax/database/repository.dart';
 import 'package:quax/generated/l10n.dart';
 import 'package:quax/group/feed_session_cache.dart';
 import 'package:quax/tweet/video_controller_pool.dart';
+import 'package:quax/tweet/video_player_budget.dart';
 import 'package:quax/group/group_model.dart';
 import 'package:quax/group/group_screen.dart';
 import 'package:quax/home/_feed.dart';
@@ -310,13 +311,15 @@ Future<void> main() async {
 
     var trendLocationModel = UserTrendLocationModel(prefService);
 
+    var videoPlayerBudget = await loadVideoPlayerBudget();
+
     runApp(PrefService(
         service: prefService,
         child: MultiProvider(
           providers: [
             Provider(create: (context) => groupsModel),
             Provider(create: (context) => feedSessionCache),
-            Provider(create: (context) => VideoControllerPool(maxSize: 2)),
+            Provider(create: (context) => VideoControllerPool(maxSize: videoPlayerBudget)),
             Provider(create: (context) => homeModel),
             ChangeNotifierProvider(create: (context) => importDataModel),
             Provider(create: (context) => subscriptionsModel),
