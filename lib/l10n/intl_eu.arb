@@ -455,6 +455,8 @@
   "@sorry_the_replied_tweet_could_not_be_found": {},
   "subscribe": "Harpidetu",
   "@subscribe": {},
+  "subscribers_only_post": "@{screenName}(r)en harpidedunentzako argitalpena",
+  "subscribers_only_post_of_author": "Egilearen harpidedunentzako argitalpena",
   "subscriptions": "Harpidetzak",
   "@subscriptions": {},
   "subtitles": "Azpitituluak",
@@ -608,5 +610,7 @@
   "you_must_have_at_least_2_home_screen_pages": "Hasierako 2 orrialde izan behar ditu gutxienez",
   "@you_must_have_at_least_2_home_screen_pages": {},
   "your_profile_must_be_public_otherwise_the_import_will_not_work": "Zure profilak publikoa izan behar du, bestela inportazioak ez du funtzionatuko",
-  "@your_profile_must_be_public_otherwise_the_import_will_not_work": {}
+  "@your_profile_must_be_public_otherwise_the_import_will_not_work": {},
+  "@subscribers_only_post": {},
+  "@subscribers_only_post_of_author": {}
 }

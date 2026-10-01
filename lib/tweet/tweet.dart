@@ -122,6 +122,11 @@ class TweetTileState extends State<TweetTile> with SingleTickerProviderStateMixi
   }
 
   void _initializeTweetParts() {
+    // An unavailable post is drawn as such, often without any text to prepare
+    if (tweet.isTombstone ?? false) {
+      return;
+    }
+
     // Get the text to display from the actual tweet, i.e. the retweet if there is one, otherwise we end up with "RT @" crap in our text
     var actualTweet = tweet.retweetedStatusWithCard ?? tweet;
     // get the longest tweet between legacy (still used most of the time) and noteText (mostly ny premium users?)
@@ -733,6 +738,7 @@ class TweetTileState extends State<TweetTile> with SingleTickerProviderStateMixi
 
     final bodyChildren = <Widget>[
       if (tweet.article == null) content,
+      if (tweet.isSubscriberPreview) _SubscriberPreviewNotice(screenName: tweet.user?.screenName ?? ''),
       media,
       quotedTweet,
       TweetCard(tweet: tweet, card: tweet.card),
@@ -883,6 +889,27 @@ class TweetHasNoContentException {
   @override
   String toString() {
     return 'The tweet has no content {id: $id}';
+  }
+}
+
+/// Says why a post reserved to the subscribers of its author stops short
+class _SubscriberPreviewNotice extends StatelessWidget {
+  final String screenName;
+
+  const _SubscriberPreviewNotice({required this.screenName});
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).hintColor);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+      child: Row(children: [
+        Icon(Icons.lock_outline, size: 14, color: style?.color),
+        const SizedBox(width: 8),
+        Flexible(child: Text(L10n.of(context).subscribers_only_post(screenName), style: style)),
+      ]),
+    );
   }
 }
 

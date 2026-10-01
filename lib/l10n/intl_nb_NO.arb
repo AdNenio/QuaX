@@ -455,6 +455,8 @@
   "@sorry_the_replied_tweet_could_not_be_found": {},
   "subscribe": "Abonnere",
   "@subscribe": {},
+  "subscribers_only_post": "Innlegg forbeholdt abonnentene til @{screenName}",
+  "subscribers_only_post_of_author": "Innlegg forbeholdt forfatterens abonnenter",
   "subscriptions": "Abonnementer",
   "@subscriptions": {},
   "subtitles": "Undertekster",
@@ -608,5 +610,7 @@
   "you_must_have_at_least_2_home_screen_pages": "Du må ha minst 2 startsider",
   "@you_must_have_at_least_2_home_screen_pages": {},
   "your_profile_must_be_public_otherwise_the_import_will_not_work": "Profilen din må være offentlig, ellers vil ikke importen fungere",
-  "@your_profile_must_be_public_otherwise_the_import_will_not_work": {}
+  "@your_profile_must_be_public_otherwise_the_import_will_not_work": {},
+  "@subscribers_only_post": {},
+  "@subscribers_only_post_of_author": {}
 }

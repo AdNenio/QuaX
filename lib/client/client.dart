@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:dart_twitter_api/src/utils/date_utils.dart';
 import 'package:dart_twitter_api/twitter_api.dart';
 import 'package:ffcache/ffcache.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:quax/catcher/exceptions.dart';
 import 'package:quax/client/account_selector.dart';
 import 'package:quax/client/accounts.dart';
@@ -146,7 +147,10 @@ class UnknownProfileUnavailableReason with SyntheticException implements Excepti
 }
 
 class Twitter {
-  static final TwitterApi _twitterApi = TwitterApi(client: _QuackerTwitterClient());
+  static TwitterApi _twitterApi = TwitterApi(client: _QuackerTwitterClient());
+
+  @visibleForTesting
+  static set client(AbstractTwitterClient client) => _twitterApi = TwitterApi(client: client);
 
   static final FFCache _cache = FFCache();
 
@@ -415,14 +419,11 @@ class Twitter {
     for (var entry in addEntries) {
       var entryId = entry['entryId'] as String;
       if (entryId.startsWith('tweet-')) {
-        final tweetResult = entry['content']?['itemContent']?['tweet_results']?['result'];
-        final result =
-            tweetResult?['__typename'] == 'TweetWithVisibilityResults' ? tweetResult['tweet'] : tweetResult;
+        final result = entry['content']?['itemContent']?['tweet_results']?['result'];
+        final id = result?['rest_id'] ?? result?['tweet']?['rest_id'];
 
-        if (result?['rest_id'] != null) {
-          replies.add(
-            TweetChain(id: result['rest_id'], tweets: [TweetWithCard.fromGraphqlJson(result)], isPinned: false),
-          );
+        if (id != null) {
+          replies.add(TweetChain(id: id, tweets: [TweetWithCard.fromGraphqlJson(result)], isPinned: false));
         } else {
           // Deleted posts come as an empty result, so no reason is given
           replies.add(TweetChain(
@@ -482,29 +483,23 @@ class Twitter {
         // TODO: Use as the "next page" cursor
       }
 
-      if (entryId.startsWith('profile-conversation')) {
+      final conversation = RegExp(r'^profile-(originals-)?conversation-').firstMatch(entryId);
+      if (conversation != null) {
         List<TweetWithCard> tweets = [];
 
         // TODO: This is missing tombstone support
         for (var item in entry['content']['items']) {
           var itemType = item['item']?['itemContent']?['itemType'];
           if (itemType == 'TimelineTweet') {
-            if (item['item']['itemContent']['tweet_results']?['result'] != null) {
-              if (item['item']['itemContent']['tweet_results']['result']['tweet'] == null) {
-                var tweet = TweetWithCard.fromGraphqlJson(item['item']['itemContent']['tweet_results']['result']);
-                tweets.add(tweet);
-              } else {
-                var tweet = TweetWithCard.fromGraphqlJson(
-                  item['item']['itemContent']['tweet_results']['result']['tweet'],
-                );
-                tweets.add(tweet);
-              }
+            final result = item['item']['itemContent']['tweet_results']?['result'];
+            if (result != null) {
+              tweets.add(TweetWithCard.fromGraphqlJson(result));
             }
           }
         }
 
         // TODO: There must be a better way of getting the conversation ID
-        replies.add(TweetChain(id: entryId.replaceFirst('profile-conversation-', ''), tweets: tweets, isPinned: false));
+        replies.add(TweetChain(id: entryId.substring(conversation.end), tweets: tweets, isPinned: false));
       }
     }
     return replies;
@@ -1123,6 +1118,7 @@ class TweetWithCard extends Tweet {
   TweetWithCard? birdwatchQuotedStatus; // Community notes
   Article? article;
   int? viewCount;
+  bool isSubscriberPreview = false;
 
   TweetWithCard();
 
@@ -1138,6 +1134,7 @@ class TweetWithCard extends Tweet {
     json['viewCount'] = viewCount;
     json['noteText'] = noteText;
     json['noteEntities'] = noteEntities?.toJson();
+    json['isSubscriberPreview'] = isSubscriberPreview;
 
     return json;
   }
@@ -1146,7 +1143,10 @@ class TweetWithCard extends Tweet {
     var tweetWithCard = TweetWithCard();
     tweetWithCard.idStr = '';
     tweetWithCard.isTombstone = true;
-    tweetWithCard.text = (e['richText']?['text'] ?? e['text']?['text'] as String?)?.replaceFirst(' Learn more', '');
+    final text = e['text'];
+    tweetWithCard.text = (e['richText']?['text'] ?? (text is Map ? text['text'] : null) as String?)
+            ?.replaceFirst(' Learn more', '') ??
+        (e['reason'] == 'ExclusiveTweet' ? L10n.current.subscribers_only_post_of_author : null);
 
     return tweetWithCard;
   }
@@ -1196,6 +1196,7 @@ class TweetWithCard extends Tweet {
     tweetWithCard.article = e['article'] == null ? null : Article.fromJson(e['article']);
     tweetWithCard.noteText = e['noteText'];
     tweetWithCard.noteEntities = e['noteEntities'] == null ? null : Entities.fromJson(e['noteEntities']);
+    tweetWithCard.isSubscriberPreview = e['isSubscriberPreview'] as bool? ?? false;
 
     return tweetWithCard;
   }
@@ -1205,7 +1206,10 @@ class TweetWithCard extends Tweet {
     dynamic quotedStatus;
     dynamic user;
 
-    if (result['tweet'] != null) {
+    final isSubscriberPreview = result['__typename'] == 'TweetPreviewDisplay';
+    if (isSubscriberPreview && result['tweet'] is Map<String, dynamic>) {
+      result = _withPreviewAsLegacy(result['tweet']);
+    } else if (result['tweet'] != null) {
       result = result['tweet']!;
     } else if (result['legacy']?['retweeted_status_result']?['result'] != null) {
       retweetedStatus = TweetWithCard.fromGraphqlJson(result['legacy']['retweeted_status_result']['result']!);
@@ -1252,6 +1256,8 @@ class TweetWithCard extends Tweet {
         quotedStatus,
         int.tryParse(result['views']?['count'] ?? ''));
 
+    tweet.isSubscriberPreview = isSubscriberPreview;
+
     if (tweet.card == null && result['card']?['legacy'] != null) {
       tweet.card = result['card']['legacy'];
       var bindingValuesList = tweet.card!['binding_values'] as List?;
@@ -1279,6 +1285,29 @@ class TweetWithCard extends Tweet {
     }
 
     return tweet;
+  }
+
+  static Map<String, dynamic> _withPreviewAsLegacy(Map<String, dynamic> preview) {
+    final text = preview['text'] as String? ?? '';
+    final id = preview['rest_id'] as String?;
+    return {
+      ...preview,
+      'views': preview['view_count'],
+      'legacy': {
+        'id_str': id,
+        'conversation_id_str': id,
+        'user_id_str': preview['core']?['user_results']?['result']?['rest_id'],
+        'full_text': text,
+        'display_text_range': [0, text.runes.length],
+        'entities': preview['entities'],
+        'created_at': preview['created_at'],
+        'favorite_count': preview['favorite_count'],
+        'quote_count': preview['quote_count'],
+        'reply_count': preview['reply_count'],
+        'retweet_count': preview['retweet_count'],
+        'in_reply_to_status_id_str': preview['reply_to_results']?['rest_id'],
+      },
+    };
   }
 
   static Map<String, dynamic> rearrangeBirdwatch(Map<String, dynamic> birdwatch) {

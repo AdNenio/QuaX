@@ -47,6 +47,14 @@
       "description": "Unknown handle: X answers {\"data\": {}} with no errors array"
     },
     {
+      "url": "https://x.com/Osemka8",
+      "description": "Profile whose posts tab mixes subscriber-only previews (TweetPreviewDisplay) into its threads"
+    },
+    {
+      "url": "https://x.com/Osemka8/status/2105589900078641579",
+      "description": "Subscriber-only post opened directly: the app showed it as unavailable"
+    },
+    {
       "url": "https://x.com/quax_tests/status/2095921351106146703",
       "description": "Multi-codepoint emoji before the entities: 103 code points for 112 UTF-16 units, plus a summary card carrying @FlutterDev"
     },

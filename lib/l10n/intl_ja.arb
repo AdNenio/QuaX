@@ -455,6 +455,8 @@
   "@sorry_the_replied_tweet_could_not_be_found": {},
   "subscribe": "登録する",
   "@subscribe": {},
+  "subscribers_only_post": "@{screenName}の購読者限定ポスト",
+  "subscribers_only_post_of_author": "投稿者の購読者限定ポスト",
   "subscriptions": "登録アカウント",
   "@subscriptions": {},
   "subtitles": "字幕",
@@ -608,5 +610,7 @@
   "you_must_have_at_least_2_home_screen_pages": "ホーム画面にはページが少なくとも2つ必要です",
   "@you_must_have_at_least_2_home_screen_pages": {},
   "your_profile_must_be_public_otherwise_the_import_will_not_work": "公開アカウントである必要があります",
-  "@your_profile_must_be_public_otherwise_the_import_will_not_work": {}
+  "@your_profile_must_be_public_otherwise_the_import_will_not_work": {},
+  "@subscribers_only_post": {},
+  "@subscribers_only_post_of_author": {}
 }

@@ -455,6 +455,8 @@
   "@sorry_the_replied_tweet_could_not_be_found": {},
   "subscribe": "सदस्यता लें",
   "@subscribe": {},
+  "subscribers_only_post": "@{screenName} के सब्सक्राइबर के लिए आरक्षित पोस्ट",
+  "subscribers_only_post_of_author": "लेखक के सब्सक्राइबर के लिए आरक्षित पोस्ट",
   "subscriptions": "सदस्यताएँ",
   "@subscriptions": {},
   "subtitles": "उपशीर्षक",
@@ -608,5 +610,7 @@
   "you_must_have_at_least_2_home_screen_pages": "आपके पास कम से कम 2 होम स्क्रीन पृष्ठ होने चाहिए",
   "@you_must_have_at_least_2_home_screen_pages": {},
   "your_profile_must_be_public_otherwise_the_import_will_not_work": "आपकी प्रोफ़ाइल सार्वजनिक होनी चाहिए, अन्यथा आयात काम नहीं करेगा",
-  "@your_profile_must_be_public_otherwise_the_import_will_not_work": {}
+  "@your_profile_must_be_public_otherwise_the_import_will_not_work": {},
+  "@subscribers_only_post": {},
+  "@subscribers_only_post_of_author": {}
 }

@@ -455,6 +455,8 @@
   "@sorry_the_replied_tweet_could_not_be_found": {},
   "subscribe": "訂閱",
   "@subscribe": {},
+  "subscribers_only_post": "@{screenName} 的訂閱者專屬貼文",
+  "subscribers_only_post_of_author": "作者的訂閱者專屬貼文",
   "subscriptions": "訂閱",
   "@subscriptions": {},
   "subtitles": "字幕",
@@ -608,5 +610,7 @@
   "you_must_have_at_least_2_home_screen_pages": "您必須至少有 2 個主畫面頁面",
   "@you_must_have_at_least_2_home_screen_pages": {},
   "your_profile_must_be_public_otherwise_the_import_will_not_work": "您的個人資料必須為公開，否則匯入將無法運作",
-  "@your_profile_must_be_public_otherwise_the_import_will_not_work": {}
+  "@your_profile_must_be_public_otherwise_the_import_will_not_work": {},
+  "@subscribers_only_post": {},
+  "@subscribers_only_post_of_author": {}
 }

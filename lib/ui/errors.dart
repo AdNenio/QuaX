@@ -5,6 +5,7 @@ import 'package:async_button_builder/async_button_builder.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -425,39 +426,37 @@ class _ExpandableDetails extends StatefulWidget {
 class _ExpandableDetailsState extends State<_ExpandableDetails> {
   static const _collapsedLines = 2;
 
+  final _textKey = GlobalKey();
   bool _expanded = false;
+  bool _overflows = false;
 
-  bool _overflows(BuildContext context, double maxWidth) {
-    final painter = TextPainter(
-      text: TextSpan(text: widget.text, style: widget.style),
-      maxLines: _collapsedLines,
-      textDirection: Directionality.of(context),
-      textScaler: MediaQuery.textScalerOf(context),
-    )..layout(maxWidth: maxWidth);
-    final overflows = painter.didExceedMaxLines;
-    painter.dispose();
-    return overflows;
+  void _checkOverflow(Duration _) {
+    final paragraph = _textKey.currentContext?.findRenderObject();
+    if (!mounted || _expanded || paragraph is! RenderParagraph) return;
+    if (paragraph.didExceedMaxLines != _overflows) {
+      setState(() => _overflows = paragraph.didExceedMaxLines);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      final text = Text(widget.text,
-          maxLines: _expanded ? null : _collapsedLines,
-          overflow: _expanded ? null : TextOverflow.ellipsis,
-          style: widget.style);
-      if (!_overflows(context, constraints.maxWidth)) return text;
+    WidgetsBinding.instance.addPostFrameCallback(_checkOverflow);
+    final text = Text(widget.text,
+        key: _textKey,
+        maxLines: _expanded ? null : _collapsedLines,
+        overflow: _expanded ? null : TextOverflow.ellipsis,
+        style: widget.style);
+    if (!_overflows) return text;
 
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => setState(() => _expanded = !_expanded),
-        child: AnimatedSize(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.topCenter,
-          child: text,
-        ),
-      );
-    });
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => setState(() => _expanded = !_expanded),
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.topCenter,
+        child: text,
+      ),
+    );
   }
 }

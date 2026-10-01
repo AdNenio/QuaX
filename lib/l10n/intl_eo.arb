@@ -455,6 +455,8 @@
   "@sorry_the_replied_tweet_could_not_be_found": {},
   "subscribe": "Aboni",
   "@subscribe": {},
+  "subscribers_only_post": "Afiŝo rezervita al abonantoj de @{screenName}",
+  "subscribers_only_post_of_author": "Afiŝo rezervita al abonantoj de la aŭtoro",
   "subscriptions": "Abonoj",
   "@subscriptions": {},
   "subtitles": "Subtekstoj",
@@ -608,5 +610,7 @@
   "you_must_have_at_least_2_home_screen_pages": "Vi devas havi malpleje 2 paĝojn de hejmekrano",
   "@you_must_have_at_least_2_home_screen_pages": {},
   "your_profile_must_be_public_otherwise_the_import_will_not_work": "Via profilo devas esti publika, alie la importo ne funkcios",
-  "@your_profile_must_be_public_otherwise_the_import_will_not_work": {}
+  "@your_profile_must_be_public_otherwise_the_import_will_not_work": {},
+  "@subscribers_only_post": {},
+  "@subscribers_only_post_of_author": {}
 }

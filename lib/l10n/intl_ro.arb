@@ -455,6 +455,8 @@
   "@sorry_the_replied_tweet_could_not_be_found": {},
   "subscribe": "Abonează-te",
   "@subscribe": {},
+  "subscribers_only_post": "Postare rezervată abonaților lui @{screenName}",
+  "subscribers_only_post_of_author": "Postare rezervată abonaților autorului",
   "subscriptions": "Abonamente",
   "@subscriptions": {},
   "subtitles": "Subtitrări",
@@ -608,5 +610,7 @@
   "you_must_have_at_least_2_home_screen_pages": "Trebuie să aveți cel puțin 2 pagini de ecran de start",
   "@you_must_have_at_least_2_home_screen_pages": {},
   "your_profile_must_be_public_otherwise_the_import_will_not_work": "Profilul dvs. trebuie să fie public, altfel importul nu va funcționa",
-  "@your_profile_must_be_public_otherwise_the_import_will_not_work": {}
+  "@your_profile_must_be_public_otherwise_the_import_will_not_work": {},
+  "@subscribers_only_post": {},
+  "@subscribers_only_post_of_author": {}
 }

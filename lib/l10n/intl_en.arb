@@ -455,6 +455,14 @@
   "@sorry_the_replied_tweet_could_not_be_found": {},
   "subscribe": "Subscribe",
   "@subscribe": {},
+  "subscribers_only_post": "Post reserved for subscribers of @{screenName}",
+  "@subscribers_only_post": {
+    "description": "Under the preview of a post reserved to the subscribers of its author, whose handle is screenName"
+  },
+  "subscribers_only_post_of_author": "Post reserved for the author's subscribers",
+  "@subscribers_only_post_of_author": {
+    "description": "On a post X hides entirely as reserved to subscribers, without telling who wrote it"
+  },
   "subscriptions": "Subscriptions",
   "@subscriptions": {},
   "subtitles": "Subtitles",

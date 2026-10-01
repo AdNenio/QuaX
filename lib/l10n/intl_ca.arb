@@ -455,6 +455,8 @@
   "@sorry_the_replied_tweet_could_not_be_found": {},
   "subscribe": "Subscriure",
   "@subscribe": {},
+  "subscribers_only_post": "Publicació reservada als subscriptors de @{screenName}",
+  "subscribers_only_post_of_author": "Publicació reservada als subscriptors de l'autor",
   "subscriptions": "Subscripcions",
   "@subscriptions": {},
   "subtitles": "Subtítols",
@@ -608,5 +610,7 @@
   "you_must_have_at_least_2_home_screen_pages": "Heu de tenir almenys 2 pàgines de pantalla d'inici",
   "@you_must_have_at_least_2_home_screen_pages": {},
   "your_profile_must_be_public_otherwise_the_import_will_not_work": "El teu perfil ha de ser públic, en cas contrari la importació no funcionarà",
-  "@your_profile_must_be_public_otherwise_the_import_will_not_work": {}
+  "@your_profile_must_be_public_otherwise_the_import_will_not_work": {},
+  "@subscribers_only_post": {},
+  "@subscribers_only_post_of_author": {}
 }
