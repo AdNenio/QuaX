@@ -48,12 +48,7 @@ jobs:
             ${{ runner.os }}-build-
 
       - name: Generate icons
-        run: |
-          python -mvenv .venv
-          source ./.venv/bin/activate
-          pip install -r requirements.txt
-          python generate_icons.py
-          deactivate
+        uses: ./.github/actions/generate-icons
 
       - name: Generate the sources
         run: |

@@ -23,6 +23,9 @@ jobs:
           flutter config --no-analytics
           flutter pub get
 
+      - name: Generate icons
+        uses: ./.github/actions/generate-icons
+
       # lib/generated and lib/oss_licenses.dart are gitignored, so nothing compiles from a fresh
       # checkout until they have been generated.
       - name: Generate the sources

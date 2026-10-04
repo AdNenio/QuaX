@@ -101,12 +101,7 @@ jobs:
           cache: true
 
       - name: Generate icons
-        run: |
-          python -mvenv .venv
-          source ./.venv/bin/activate
-          pip install -r requirements.txt
-          python generate_icons.py
-          deactivate
+        uses: ./.github/actions/generate-icons
 
       - name: Update the SDK and the dependencies
         uses: anthropics/claude-code-action@7b0b255830a1fab6e602658672acad11c12d841d # v1.0.226
