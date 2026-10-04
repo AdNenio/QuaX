@@ -147,11 +147,14 @@ Future<void> _importFromFile(BuildContext context, File file) async {
   }
 }
 
-Future<void> importBackup(BuildContext context) async {
+/// Whether a backup was picked and imported.
+Future<bool> importBackup(BuildContext context) async {
   var path = await FlutterFileDialog.pickFile(params: const OpenFileDialogParams());
-  if (path != null && context.mounted) {
-    await _importFromFile(context, File(path));
+  if (path == null || !context.mounted) {
+    return false;
   }
+  await _importFromFile(context, File(path));
+  return true;
 }
 
 class SettingsDataFragment extends StatelessWidget {

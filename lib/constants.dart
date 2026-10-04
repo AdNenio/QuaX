@@ -38,6 +38,7 @@ const optionConfirmClose = 'confirm_close';
 const optionOpenLinksInEmbeddedBrowser = 'open_links_in_embedded_browser';
 const optionShareBaseUrl = 'share_base_url';
 const optionDiscordPopupDismissed = 'discord_popup.dismissed';
+const optionOnboardingDone = 'onboarding.done';
 
 const optionDisableWarningsForUnrelatedPostsInFeed = 'disable_warnings_for_unrelated_posts_in_feed';
 

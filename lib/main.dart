@@ -9,7 +9,6 @@ import 'package:flutter_localizations/flutter_localizations.dart' as flutter_l10
 import 'package:flutter/services.dart';
 import 'package:flutter_portal/flutter_portal.dart';
 import 'package:quax/client/accounts.dart';
-import 'package:quax/client/login_webview.dart';
 
 import 'package:quax/constants.dart';
 import 'package:quax/database/repository.dart';
@@ -23,6 +22,7 @@ import 'package:quax/home/_feed.dart';
 import 'package:quax/home/home_model.dart';
 import 'package:quax/home/home_screen.dart';
 import 'package:quax/import_data_model.dart';
+import 'package:quax/onboarding/onboarding_screen.dart';
 import 'package:quax/profile/profile.dart';
 import 'package:quax/saved/liked_tweet_model.dart';
 import 'package:quax/saved/saved_folders_screen.dart';
@@ -30,7 +30,6 @@ import 'package:quax/saved/saved_tweet_folder_model.dart';
 import 'package:quax/saved/saved_tweet_model.dart';
 import 'package:quax/search/search.dart';
 import 'package:quax/search/search_model.dart';
-import 'package:quax/settings/_data.dart';
 import 'package:quax/settings/_home.dart';
 import 'package:quax/settings/settings.dart';
 import 'package:quax/settings/settings_export_screen.dart';
@@ -98,45 +97,6 @@ Future<void> checkForUpdates(BuildContext context) async {
         Logger.root.severe('Unable to check for updates');
       }
     }
-  }
-}
-
-Future<void> checkForAccounts(BuildContext context) async {
-  Logger.root.info('Checking for accounts');
-
-  final accounts = await getAccounts();
-  if (accounts.isEmpty) {
-    if (!context.mounted) {
-      return;
-    }
-
-    await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("⚠️ ${L10n.of(context).not_logged_in}"),
-          content: Text(L10n.of(context).quax_doesnt_work_without_account_please_login),
-          actions: [
-            TextButton(
-              child: Text(L10n.of(context).import_backup),
-              onPressed: () async {
-                await importBackup(context);
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                }
-              },
-            ),
-            TextButton(
-              child: Text(L10n.of(context).login),
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const TwitterLoginWebview()));
-              },
-            ),
-          ],
-        );
-      },
-    );
   }
 }
 
@@ -210,6 +170,15 @@ Future<void> _migrateMediaQualityPrefs(BasePrefService prefs) async {
   await prefs.set(optionMediaQualitySplitMigrated, true);
 }
 
+// Decided on the first launch only, so that a newcomer who logs in, then leaves, gets the onboarding back
+Future<void> _decideOnboarding(BasePrefService prefs, SubscriptionsModel subscriptionsModel) async {
+  if (prefs.get<bool>(optionOnboardingDone) != null) {
+    return;
+  }
+  final setUp = subscriptionsModel.state.isNotEmpty || (await getAccounts()).isNotEmpty;
+  await prefs.set(optionOnboardingDone, setUp);
+}
+
 Future<void> main() async {
   Logger.root.onRecord.listen((event) async {
     log(event.message, error: event.error, stackTrace: event.stackTrace);
@@ -259,8 +228,8 @@ Future<void> main() async {
     optionSubscriptionOrderCustom: '',
     optionThemeMode: 'system',
     optionThemeColor: 'accent',
-    optionThemeTrueBlack: true,
-    optionThemeTrueBlackTweetCards: true,
+    optionThemeTrueBlack: false,
+    optionThemeTrueBlackTweetCards: false,
     optionShowNavigationLabels: false,
     optionTweetsHideSensitive: true,
     optionSavedShowAllTab: true,
@@ -300,6 +269,8 @@ Future<void> main() async {
     var subscriptionsModel = SubscriptionsModel(prefService, groupsModel);
     await subscriptionsModel.reloadSubscriptions();
 
+    await _decideOnboarding(prefService, subscriptionsModel);
+
     var feedSessionCache = FeedSessionCache();
     // Registration order matters: invalidateAll must run before any
     // GroupFeedShell reload listener, so by the time the shell remounts the
@@ -332,7 +303,7 @@ Future<void> main() async {
             Provider(create: (context) => TrendsModel(trendLocationModel)),
             ChangeNotifierProvider(create: (_) => VideoContextState(prefService.get(optionMediaDefaultMute))),
           ],
-          child: FritterApp(),
+          child: FritterApp(onboarding: !prefService.get<bool>(optionOnboardingDone)!),
         )));
   } catch (e, stackTrace) {
     log('Unable to start Fritter', error: e, stackTrace: stackTrace);
@@ -340,7 +311,10 @@ Future<void> main() async {
 }
 
 class FritterApp extends StatefulWidget {
-  const FritterApp({super.key});
+  /// Whether the app opens on the onboarding, which then replaces the dialogs shown at launch
+  final bool onboarding;
+
+  const FritterApp({super.key, required this.onboarding});
 
   @override
   State<FritterApp> createState() => _FritterAppState();
@@ -357,7 +331,6 @@ class _FritterAppState extends State<FritterApp> {
   bool _trueBlack = true;
   bool _checkUpdates = false;
   bool _updateDialogShown = false;
-  bool _accountDialogShown = false;
   bool _discordDialogShown = false;
   bool _isSecure = false;
   double _textScaleFactor = 1.0;
@@ -517,7 +490,9 @@ class _FritterAppState extends State<FritterApp> {
                   themeMode: themeMode,
                   initialRoute: '/',
                   routes: {
-                    routeHome: (context) => const DefaultPage(),
+                    routeHome: (context) => PrefService.of(context, listen: false).get<bool>(optionOnboardingDone)!
+                        ? const DefaultPage()
+                        : const OnboardingWizard(),
                     routeGroup: (context) => const GroupScreen(),
                     routeProfile: (context) => const ProfileScreen(),
                     routeSearch: (context) => const ResultsScreen(),
@@ -528,18 +503,15 @@ class _FritterAppState extends State<FritterApp> {
                     routeStatus: (context) => const StatusScreen(),
                   },
                   builder: (context, child) {
+                    if (widget.onboarding) {
+                      _updateDialogShown = _discordDialogShown = true;
+                    }
+
                     if (_checkUpdates && !_updateDialogShown) {
                       _updateDialogShown = true;
                       // Use navigatorKey's context for showDialog
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         checkForUpdates(_navigatorKey.currentContext!);
-                      });
-                    }
-
-                    if (!_accountDialogShown) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        _accountDialogShown = true;
-                        checkForAccounts(_navigatorKey.currentContext!);
                       });
                     }
 

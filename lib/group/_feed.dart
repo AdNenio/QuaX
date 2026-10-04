@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:quax/catcher/exceptions.dart';
+import 'package:quax/client/accounts.dart';
 import 'package:quax/client/client.dart';
 import 'package:quax/constants.dart';
 import 'package:quax/database/entities.dart';
@@ -14,6 +15,7 @@ import 'package:quax/group/group_screen.dart';
 import 'package:quax/group/search_query.dart';
 import 'package:quax/tweet/paginated_tweet_list.dart';
 import 'package:quax/tweet/tweet_context_scope.dart';
+import 'package:quax/ui/errors.dart';
 import 'package:quax/utils/iterables.dart';
 import 'package:quax/utils/paging.dart';
 import 'package:pref/pref.dart';
@@ -318,11 +320,7 @@ class _SubscriptionGroupFeedState extends State<SubscriptionGroupFeed> {
   @override
   Widget build(BuildContext context) {
     if (widget.chunks.isEmpty) {
-      return Scaffold(
-        body: Center(
-          child: Text(L10n.of(context).this_group_contains_no_subscriptions),
-        ),
-      );
+      return const Scaffold(body: EmptyGroupFeed());
     }
 
     return Scaffold(
@@ -341,6 +339,35 @@ class _SubscriptionGroupFeedState extends State<SubscriptionGroupFeed> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// A feed with nothing to load. Without an account, nothing could load anyway, so the user is invited to add one.
+class EmptyGroupFeed extends StatelessWidget {
+  final Future<List<Account>> Function() accounts;
+
+  const EmptyGroupFeed({super.key, this.accounts = getAccounts});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Account>>(
+      future: accounts(),
+      builder: (context, snapshot) {
+        final accounts = snapshot.data;
+        if (accounts == null) {
+          return const SizedBox.shrink();
+        }
+        if (accounts.isEmpty) {
+          return ListView(children: [
+            ErrorCard(
+                error: NoAccountAvailableException(),
+                stackTrace: null,
+                prefix: (l10n) => l10n.unable_to_load_the_tweets_for_the_feed),
+          ]);
+        }
+        return Center(child: Text(L10n.of(context).this_group_contains_no_subscriptions));
+      },
     );
   }
 }
