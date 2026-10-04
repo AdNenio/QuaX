@@ -5,22 +5,24 @@ import 'dart:io';
 
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter_localizations/flutter_localizations.dart' as flutter_l10n;
 import 'package:flutter/services.dart';
 import 'package:flutter_portal/flutter_portal.dart';
 import 'package:quax/client/accounts.dart';
-import 'package:quax/client/login_webview.dart';
 
 import 'package:quax/constants.dart';
 import 'package:quax/database/repository.dart';
 import 'package:quax/generated/l10n.dart';
 import 'package:quax/group/feed_session_cache.dart';
 import 'package:quax/tweet/video_controller_pool.dart';
+import 'package:quax/tweet/video_player_budget.dart';
 import 'package:quax/group/group_model.dart';
 import 'package:quax/group/group_screen.dart';
 import 'package:quax/home/_feed.dart';
 import 'package:quax/home/home_model.dart';
 import 'package:quax/home/home_screen.dart';
 import 'package:quax/import_data_model.dart';
+import 'package:quax/onboarding/onboarding_screen.dart';
 import 'package:quax/profile/profile.dart';
 import 'package:quax/saved/liked_tweet_model.dart';
 import 'package:quax/saved/saved_folders_screen.dart';
@@ -28,7 +30,6 @@ import 'package:quax/saved/saved_tweet_folder_model.dart';
 import 'package:quax/saved/saved_tweet_model.dart';
 import 'package:quax/search/search.dart';
 import 'package:quax/search/search_model.dart';
-import 'package:quax/settings/_data.dart';
 import 'package:quax/settings/_home.dart';
 import 'package:quax/settings/settings.dart';
 import 'package:quax/settings/settings_export_screen.dart';
@@ -48,7 +49,7 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'package:app_links/app_links.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-Future checkForUpdates(context) async {
+Future<void> checkForUpdates(BuildContext context) async {
   Logger.root.info('Checking for updates');
 
   PackageInfo packageInfo = await PackageInfo.fromPlatform();
@@ -64,6 +65,10 @@ Future checkForUpdates(context) async {
     final Map<dynamic, dynamic> map = json.decode(contentAsString);
     if (map["tag_name"] != null) {
       if (map["tag_name"] != 'v${packageInfo.version}') {
+        if (!context.mounted) {
+          return;
+        }
+
         await showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -79,7 +84,9 @@ Future checkForUpdates(context) async {
                   child: Text(L10n.of(context).view_on_github),
                   onPressed: () async {
                     await openUri(context, map['html_url']);
-                    Navigator.of(context).pop();
+                    if (context.mounted) {
+                      Navigator.of(context).pop();
+                    }
                   },
                 ),
               ],
@@ -90,41 +97,6 @@ Future checkForUpdates(context) async {
         Logger.root.severe('Unable to check for updates');
       }
     }
-  }
-}
-
-Future checkForAccounts(context) async {
-  Logger.root.info('Checking for accounts');
-
-  final accounts = await getAccounts();
-  if (accounts.isEmpty) {
-    await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("⚠️ ${L10n.of(context).not_logged_in}"),
-          content: Text(L10n.of(context).quax_doesnt_work_without_account_please_login),
-          actions: [
-            TextButton(
-              child: Text(L10n.of(context).import_backup),
-              onPressed: () async {
-                await importBackup(context);
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                }
-              },
-            ),
-            TextButton(
-              child: Text(L10n.of(context).login),
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const TwitterLoginWebview()));
-              },
-            ),
-          ],
-        );
-      },
-    );
   }
 }
 
@@ -198,6 +170,15 @@ Future<void> _migrateMediaQualityPrefs(BasePrefService prefs) async {
   await prefs.set(optionMediaQualitySplitMigrated, true);
 }
 
+// Decided on the first launch only, so that a newcomer who logs in, then leaves, gets the onboarding back
+Future<void> _decideOnboarding(BasePrefService prefs, SubscriptionsModel subscriptionsModel) async {
+  if (prefs.get<bool>(optionOnboardingDone) != null) {
+    return;
+  }
+  final setUp = subscriptionsModel.state.isNotEmpty || (await getAccounts()).isNotEmpty;
+  await prefs.set(optionOnboardingDone, setUp);
+}
+
 Future<void> main() async {
   Logger.root.onRecord.listen((event) async {
     log(event.message, error: event.error, stackTrace: event.stackTrace);
@@ -247,8 +228,8 @@ Future<void> main() async {
     optionSubscriptionOrderCustom: '',
     optionThemeMode: 'system',
     optionThemeColor: 'accent',
-    optionThemeTrueBlack: true,
-    optionThemeTrueBlackTweetCards: true,
+    optionThemeTrueBlack: false,
+    optionThemeTrueBlackTweetCards: false,
     optionShowNavigationLabels: false,
     optionTweetsHideSensitive: true,
     optionSavedShowAllTab: true,
@@ -288,6 +269,8 @@ Future<void> main() async {
     var subscriptionsModel = SubscriptionsModel(prefService, groupsModel);
     await subscriptionsModel.reloadSubscriptions();
 
+    await _decideOnboarding(prefService, subscriptionsModel);
+
     var feedSessionCache = FeedSessionCache();
     // Registration order matters: invalidateAll must run before any
     // GroupFeedShell reload listener, so by the time the shell remounts the
@@ -299,13 +282,15 @@ Future<void> main() async {
 
     var trendLocationModel = UserTrendLocationModel(prefService);
 
+    var videoPlayerBudget = await loadVideoPlayerBudget();
+
     runApp(PrefService(
         service: prefService,
         child: MultiProvider(
           providers: [
             Provider(create: (context) => groupsModel),
             Provider(create: (context) => feedSessionCache),
-            Provider(create: (context) => VideoControllerPool(maxSize: 2)),
+            Provider(create: (context) => VideoControllerPool(maxSize: videoPlayerBudget)),
             Provider(create: (context) => homeModel),
             ChangeNotifierProvider(create: (context) => importDataModel),
             Provider(create: (context) => subscriptionsModel),
@@ -318,7 +303,7 @@ Future<void> main() async {
             Provider(create: (context) => TrendsModel(trendLocationModel)),
             ChangeNotifierProvider(create: (_) => VideoContextState(prefService.get(optionMediaDefaultMute))),
           ],
-          child: FritterApp(),
+          child: FritterApp(onboarding: !prefService.get<bool>(optionOnboardingDone)!),
         )));
   } catch (e, stackTrace) {
     log('Unable to start Fritter', error: e, stackTrace: stackTrace);
@@ -326,7 +311,10 @@ Future<void> main() async {
 }
 
 class FritterApp extends StatefulWidget {
-  const FritterApp({super.key});
+  /// Whether the app opens on the onboarding, which then replaces the dialogs shown at launch
+  final bool onboarding;
+
+  const FritterApp({super.key, required this.onboarding});
 
   @override
   State<FritterApp> createState() => _FritterAppState();
@@ -343,7 +331,6 @@ class _FritterAppState extends State<FritterApp> {
   bool _trueBlack = true;
   bool _checkUpdates = false;
   bool _updateDialogShown = false;
-  bool _accountDialogShown = false;
   bool _discordDialogShown = false;
   bool _isSecure = false;
   double _textScaleFactor = 1.0;
@@ -462,6 +449,8 @@ class _FritterAppState extends State<FritterApp> {
                   localizationsDelegates: const [
                     L10n.delegate,
                     ...GlobalMaterialLocalizations.delegates,
+                    flutter_l10n.GlobalMaterialLocalizations.delegate,
+                    flutter_l10n.GlobalCupertinoLocalizations.delegate,
                   ],
                   supportedLocales: L10n.delegate.supportedLocales,
                   locale: _locale,
@@ -473,14 +462,7 @@ class _FritterAppState extends State<FritterApp> {
                             seedColor: themeColors[_themeColor]!
                                 .harmonizeWith(lightDynamic?.primary ?? Colors.transparent),
                             brightness: Brightness.light),
-                    pageTransitionsTheme: _disableAnimations == true
-                        ? PageTransitionsTheme(
-                            builders: {
-                              TargetPlatform.android: NoAnimationPageTransitionsBuilder(),
-                              TargetPlatform.iOS: NoAnimationPageTransitionsBuilder(),
-                            },
-                          )
-                        : null,
+                    pageTransitionsTheme: _disableAnimations == true ? _noAnimationPageTransitionsTheme : null,
                     useMaterial3: true,
                   ),
                   darkTheme: ThemeData(
@@ -502,20 +484,15 @@ class _FritterAppState extends State<FritterApp> {
                         (_trueBlack == true ? NavigationBarThemeData(backgroundColor: Colors.black) : null),
                     scaffoldBackgroundColor: (_trueBlack == true ? Colors.black : null),
                     appBarTheme: (_trueBlack == true ? AppBarThemeData(backgroundColor: Colors.black) : null),
-                    pageTransitionsTheme: _disableAnimations == true
-                        ? PageTransitionsTheme(
-                            builders: {
-                              TargetPlatform.android: NoAnimationPageTransitionsBuilder(),
-                              TargetPlatform.iOS: NoAnimationPageTransitionsBuilder(),
-                            },
-                          )
-                        : null,
+                    pageTransitionsTheme: _disableAnimations == true ? _noAnimationPageTransitionsTheme : null,
                     useMaterial3: true,
                   ),
                   themeMode: themeMode,
                   initialRoute: '/',
                   routes: {
-                    routeHome: (context) => const DefaultPage(),
+                    routeHome: (context) => PrefService.of(context, listen: false).get<bool>(optionOnboardingDone)!
+                        ? const DefaultPage()
+                        : const OnboardingWizard(),
                     routeGroup: (context) => const GroupScreen(),
                     routeProfile: (context) => const ProfileScreen(),
                     routeSearch: (context) => const ResultsScreen(),
@@ -526,18 +503,15 @@ class _FritterAppState extends State<FritterApp> {
                     routeStatus: (context) => const StatusScreen(),
                   },
                   builder: (context, child) {
+                    if (widget.onboarding) {
+                      _updateDialogShown = _discordDialogShown = true;
+                    }
+
                     if (_checkUpdates && !_updateDialogShown) {
                       _updateDialogShown = true;
                       // Use navigatorKey's context for showDialog
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         checkForUpdates(_navigatorKey.currentContext!);
-                      });
-                    }
-
-                    if (!_accountDialogShown) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        _accountDialogShown = true;
-                        checkForAccounts(_navigatorKey.currentContext!);
                       });
                     }
 
@@ -552,12 +526,15 @@ class _FritterAppState extends State<FritterApp> {
                     ErrorWidget.builder = (FlutterErrorDetails details) => FullPageErrorWidget(
                           error: details.exception,
                           stackTrace: details.stack,
-                          prefix: L10n.of(context).something_broke_in_fritter,
+                          prefix: (l10n) => l10n.something_broke_in_fritter,
                         );
 
-                    return SecureContentScope(
-                      enabled: _isSecure,
-                      child: child ?? Container(),
+                    // ignore: deprecated_member_use
+                    return MaterialUiCompatibilityBridge(
+                      child: SecureContentScope(
+                        enabled: _isSecure,
+                        child: child ?? Container(),
+                      ),
                     );
                   },
                 ));
@@ -579,6 +556,9 @@ class _DefaultPageState extends State<DefaultPage> {
 
   void handleInitialLink(Uri link) async {
     final parsed = await parseUri(link);
+    if (!mounted) {
+      return;
+    }
     switch (parsed) {
       case ProfileUriInfo(screenName: final screenName, profileTabIndex: final tab):
         Navigator.pushNamed(context, routeProfile,
@@ -589,6 +569,8 @@ class _DefaultPageState extends State<DefaultPage> {
             arguments: StatusScreenArguments(
               id: id,
               username: screenName,
+              initialMediaIndex: photoNumber == null || photoNumber < 1 ? 0 : photoNumber - 1,
+              openMediaFullScreen: direct || photoNumber != null,
             ));
         return;
       case UnknownResult():
@@ -602,7 +584,7 @@ class _DefaultPageState extends State<DefaultPage> {
               actions: [
                 TextButton(
                   child: Text(L10n.of(context).report),
-                  onPressed:  () => openUri(context, 'https://github.com/teskann/quax/issues'),
+                  onPressed:  () => openUri(context, issuesUrl),
                 ),
                 TextButton(
                   child: Text(L10n.of(context).open_in_browser),
@@ -649,7 +631,7 @@ class _DefaultPageState extends State<DefaultPage> {
       return ScaffoldErrorWidget(
           error: _migrationError,
           stackTrace: _migrationStackTrace,
-          prefix: L10n.of(context).unable_to_run_the_database_migrations);
+          prefix: (l10n) => l10n.unable_to_run_the_database_migrations);
     }
 
     return PopScope(
@@ -694,7 +676,15 @@ class _DefaultPageState extends State<DefaultPage> {
   }
 }
 
+const _noAnimationPageTransitionsTheme = PageTransitionsTheme(
+  builders: {
+    TargetPlatform.android: NoAnimationPageTransitionsBuilder(),
+  },
+);
+
 class NoAnimationPageTransitionsBuilder extends PageTransitionsBuilder {
+  const NoAnimationPageTransitionsBuilder();
+
   @override
   Widget buildTransitions<T>(
     PageRoute<T> route,

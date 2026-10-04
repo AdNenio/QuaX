@@ -153,8 +153,6 @@
   "@ended_timeago_format_endsAt_allowFromNow_true": {},
   "ends_timeago_format_endsAt_allowFromNow_true": "Ends {timeagoFormat}",
   "@ends_timeago_format_endsAt_allowFromNow_true": {},
-  "enter_your_twitter_username": "Enter your X username",
-  "@enter_your_twitter_username": {},
   "export": "Export",
   "@export": {},
   "export_accounts": "Export accounts?",
@@ -187,12 +185,41 @@
   "@feed_contains_unrelated_tweets": {},
   "feed_issue_detected": "Feed issue detected",
   "@feed_issue_detected": {},
+  "feed_rate_limited_message": "You probably have too many subscriptions. Try again later or add an account to increase your quota. Subscriptions loaded: {loaded}/{total}",
+  "@feed_rate_limited_message": {
+    "description": "Details of the rate-limit error shown above a feed or group that could only partly load. {loaded} is the number of subscriptions whose posts could be loaded, {total} the number of subscriptions in the feed",
+    "placeholders": {
+      "loaded": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "feed_rate_limited_title": "The whole feed could not be loaded",
+  "@feed_rate_limited_title": {
+    "description": "Title of the error shown above a feed or group that could only partly load because of X rate limits"
+  },
+  "feed_rate_limited_until_message": "You probably have too many subscriptions. Try again at {time} or add an account to increase your quota. Subscriptions loaded: {loaded}/{total}",
+  "@feed_rate_limited_until_message": {
+    "description": "Same as feed_rate_limited_message, when X told when the quota comes back. {time} is a time of day",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "loaded": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
   "filters": "Filters",
   "@filters": {},
   "finish": "Finish",
   "@finish": {},
-  "finished_with_snapshotData_users": "Finished with {snapshotData} users",
-  "@finished_with_snapshotData_users": {},
   "folder_is_empty": "This folder is empty",
   "@folder_is_empty": {},
   "folder_name": "Folder name",
@@ -231,12 +258,37 @@
   "@import": {},
   "import_backup": "Import backup",
   "@import_backup": {},
+  "import_count_subscriptions": "{count, plural, one{Import {count} subscription} other{Import {count} subscriptions}}",
+  "@import_count_subscriptions": {
+    "description": "Button of that dialog importing {count} subscriptions",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "import_data_from_another_device": "Import data from another device",
   "@import_data_from_another_device": {},
   "import_subscriptions": "Import subscriptions",
   "@import_subscriptions": {},
+  "import_subscriptions_intro": "Enter the username of a public 𝕏 account to import its subscriptions.",
+  "@import_subscriptions_intro": {
+    "description": "Intro of the page importing the subscriptions (followed accounts) of any X account, the user's own or someone else's"
+  },
   "import_subscriptions_text": "Subscriptions are local to QuaX. They are independent from subscriptions on your real X account. Logging-in does not affect QuaX subscriptions.\n\nDo you want to import subscriptions from @{screenName} in QuaX ?",
   "@import_subscriptions_text": {},
+  "import_too_many_subscriptions_warning": "You are about to import {count} subscriptions. Following more than {limit} subscriptions exposes you to rate limits from 𝕏.",
+  "@import_too_many_subscriptions_warning": {
+    "description": "Body of the dialog shown before importing more subscriptions than the feeds can load without hitting X rate limits. {count} is the number of subscriptions to import, {limit} the recommended maximum, both always above 255",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "limit": {
+        "type": "String"
+      }
+    }
+  },
   "imported_snapshot_data_users_so_far": "{snapshotData} users imported so far",
   "@imported_snapshot_data_users_so_far": {},
   "include_replies": "Include replies",
@@ -265,11 +317,15 @@
   "@load_media_manually": {},
   "load_media_manually_description": "Photos and videos won't load until you tap them, to save mobile data.",
   "@load_media_manually_description": {},
+  "log_out": "Log out",
+  "@log_out": {
+    "description": "Button removing the X account the user just logged in with from QuaX"
+  },
   "logging": "Logging",
   "@logging": {},
   "logging_in_quax": "Logging in QuaX",
   "@logging_in_quax": {},
-  "logging_in_quax_information": "The account you're logged in doesn't change your experience. Subscriptions, groups and saved posts are local to the app and don't affect your real account. The authentication is needed to actually fetch data from X, and doesn't enable support for interacting with posts (like, repost, ...). You can login with several accounts: in this case, QuaX will chose one of them randomly for each request it makes to x.com (search, show a profile, display feed, ...). This might help reducing \"Too many requests\" errors.",
+  "logging_in_quax_information": "The account you're logged in doesn't change your experience. Subscriptions, groups and saved posts are local to the app and don't affect your real account. The authentication is needed to actually fetch data from 𝕏, and doesn't enable support for interacting with posts (like, repost, ...). You can login with several accounts: in this case, QuaX will chose one of them randomly for each request it makes to x.com (search, show a profile, display feed, ...). This might help reducing \"Too many requests\" errors.",
   "@logging_in_quax_information": {},
   "login": "Login",
   "@login": {},
@@ -315,12 +371,14 @@
   "@no_results_for": {},
   "no_subscriptions_try_searching_or_importing_some": "No subscriptions. Try searching or importing some!",
   "@no_subscriptions_try_searching_or_importing_some": {},
-  "no_working_account_message": "It looks like none of your accounts are working right now. Sign in with another account or try again later.",
-  "@no_working_account_message": {},
-  "no_working_account_title": "Your accounts aren't working",
-  "@no_working_account_title": {},
-  "not_logged_in": "You are not logged in",
-  "@not_logged_in": {},
+  "not_found_message": "𝕏 sometimes answers this way even in normal use. Try again in a moment.",
+  "@not_found_message": {
+    "description": "Details of that error, above a single Retry button"
+  },
+  "not_found_title": "Error 404",
+  "@not_found_title": {
+    "description": "Title of the error shown when X answers 404, which happens now and then in normal use. The code 404 is widely known, keep it"
+  },
   "not_set": "Not set",
   "@not_set": {},
   "note_due_to_a_twitter_limitation_not_all_tweets_may_be_included": "Note: Due to a X limitation, not all posts may be included",
@@ -329,6 +387,64 @@
   "@numberFormat_format_total_votes": {},
   "ok": "OK",
   "@ok": {},
+  "onboarding_all_set_title": "You're all set!",
+  "@onboarding_all_set_title": {},
+  "onboarding_backup_description": "Pick up QuaX right where you left off",
+  "@onboarding_backup_description": {
+    "description": "Under \"Import backup\" in the welcome wizard: restoring a backup brings QuaX back as it was"
+  },
+  "onboarding_continue_without_account": "Continue without an account",
+  "@onboarding_continue_without_account": {},
+  "onboarding_import_from": "Import from @{screenName}",
+  "@onboarding_import_from": {
+    "description": "Button importing the subscriptions of the X account the user just logged in with",
+    "placeholders": {
+      "screenName": {
+        "type": "String"
+      }
+    }
+  },
+  "onboarding_import_from_another_account": "Import from another account",
+  "@onboarding_import_from_another_account": {},
+  "onboarding_import_text": "Bring the accounts you follow on 𝕏 into QuaX. Your 𝕏 account stays untouched.",
+  "@onboarding_import_text": {},
+  "onboarding_logged_in_text": "QuaX uses @{screenName} to load posts and profiles.",
+  "@onboarding_logged_in_text": {
+    "description": "Shown when the user comes back to the login step of the welcome wizard after logging in",
+    "placeholders": {
+      "screenName": {
+        "type": "String"
+      }
+    }
+  },
+  "onboarding_logged_in_title": "You're logged in",
+  "@onboarding_logged_in_title": {},
+  "onboarding_login_details": "Which account should I use?",
+  "@onboarding_login_details": {
+    "description": "Title of an expandable section explaining that any X account can be used to log in, and that several can be added"
+  },
+  "onboarding_login_text": "𝕏 only shows its content to logged-in users. QuaX never posts, likes or follows for you.",
+  "@onboarding_login_text": {},
+  "onboarding_login_title": "Log in to 𝕏",
+  "@onboarding_login_title": {},
+  "onboarding_no_account_text": "Without an account, QuaX can only open 𝕏 links. Feeds, search and subscriptions won't work.",
+  "@onboarding_no_account_text": {},
+  "onboarding_no_account_title": "Continue without an account?",
+  "@onboarding_no_account_title": {},
+  "onboarding_not_now": "Not now",
+  "@onboarding_not_now": {},
+  "onboarding_start_fresh": "Get started",
+  "@onboarding_start_fresh": {},
+  "onboarding_start_fresh_description": "Set QuaX up step by step",
+  "@onboarding_start_fresh_description": {},
+  "onboarding_theme_text": "You can change it anytime in the settings.",
+  "@onboarding_theme_text": {},
+  "onboarding_theme_title": "Choose your theme",
+  "@onboarding_theme_title": {},
+  "onboarding_welcome_text": "Browse 𝕏 with no ads or trackers. Your interactions stay on your device.",
+  "@onboarding_welcome_text": {},
+  "onboarding_welcome_title": "Welcome to QuaX",
+  "@onboarding_welcome_title": {},
   "oops_something_went_wrong": "Oops! Something went wrong 🥲",
   "@oops_something_went_wrong": {},
   "open_in_browser": "Open in browser",
@@ -355,8 +471,6 @@
   "@please_check_your_internet_connection_error_message": {},
   "please_enter_a_name": "Please enter a name",
   "@please_enter_a_name": {},
-  "please_note_that_the_method_fritter_uses_to_import_subscriptions_is_heavily_rate_limited_by_twitter_so_this_may_fail_if_you_have_a_lot_of_followed_accounts": "Please note that the method QuaX uses to import subscriptions is heavily rate-limited by X, so this may fail if you have a lot of followed accounts.",
-  "@please_note_that_the_method_fritter_uses_to_import_subscriptions_is_heavily_rate_limited_by_twitter_so_this_may_fail_if_you_have_a_lot_of_followed_accounts": {},
   "possibly_sensitive": "Potentially sensitive",
   "@possibly_sensitive": {},
   "possibly_sensitive_profile": "This profile may include potentially sensitive images, language, or other content. Do you still want to view it?",
@@ -377,12 +491,19 @@
   "@quality_maximum": {},
   "quality_medium": "Medium",
   "@quality_medium": {},
-  "quax_doesnt_work_without_account_please_login": "QuaX doesn't work without an X account, please login to continue using the app.\n\nX doesn't allow accessing their APIs without an account.",
-  "@quax_doesnt_work_without_account_please_login": {},
-  "rate_limited_message": "You've made too many requests in too short a time. Try again later or add another account to keep using QuaX.",
+  "rate_limited_message": "You've made too many requests in too short a time. Try again later or add an account to increase your quota.",
   "@rate_limited_message": {},
   "rate_limited_title": "Rate limited by 𝕏",
   "@rate_limited_title": {},
+  "rate_limited_until_title": "Rate limited by 𝕏 until {time}",
+  "@rate_limited_until_title": {
+    "description": "Title of the rate-limit error. {time} is the time of day when the quota comes back",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "released_under_the_mit_license": "Released under the MIT License",
   "@released_under_the_mit_license": {},
   "rename": "Rename",
@@ -415,6 +536,8 @@
   "@search": {},
   "search_term": "Search term",
   "@search_term": {},
+  "search_web_archive": "Search Web Archive",
+  "@search_web_archive": {},
   "select": "Select",
   "@select": {},
   "send": "Send",
@@ -447,14 +570,35 @@
   "@show_in_main_feed": {},
   "show_navigation_labels": "Show navigation labels?",
   "@show_navigation_labels": {},
+  "skip": "Skip",
+  "@skip": {
+    "description": "Button skipping an optional step of the welcome wizard"
+  },
   "something_broke_in_fritter": "Something broke in QuaX.",
   "@something_broke_in_fritter": {},
   "sorry_the_replied_tweet_could_not_be_found": "Sorry, the replied post could not be found!",
   "@sorry_the_replied_tweet_could_not_be_found": {},
   "subscribe": "Subscribe",
   "@subscribe": {},
+  "subscribers_only_post": "Post reserved for subscribers of @{screenName}",
+  "@subscribers_only_post": {
+    "description": "Under the preview of a post reserved to the subscribers of its author, whose handle is screenName"
+  },
+  "subscribers_only_post_of_author": "Post reserved for the author's subscribers",
+  "@subscribers_only_post_of_author": {
+    "description": "On a post X hides entirely as reserved to subscribers, without telling who wrote it"
+  },
   "subscriptions": "Subscriptions",
   "@subscriptions": {},
+  "subscriptions_imported": "{count, plural, one{1 subscription imported} other{{count} subscriptions imported}}",
+  "@subscriptions_imported": {
+    "description": "Shown once an import of subscriptions (followed accounts) is over",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "subtitles": "Subtitles",
   "@subtitles": {},
   "successfully_saved_the_media": "Saved the media!",
@@ -479,8 +623,6 @@
   "@this_group_contains_no_subscriptions": {},
   "this_took_too_long_to_load_please_check_your_network_connection": "This took too long to load. Please check your network connection!",
   "@this_took_too_long_to_load_please_check_your_network_connection": {},
-  "this_tweet_is_unavailable": "This post is unavailable. It was probably deleted.",
-  "@this_tweet_is_unavailable": {},
   "this_tweet_user_name_retweeted": "{thisTweetUserName} reposted {timeAgo}",
   "@this_tweet_user_name_retweeted": {},
   "this_user_does_not_follow_anyone": "This user does not follow anyone!",
@@ -493,8 +635,6 @@
   "@thumbnail": {},
   "timed_out": "Timed out",
   "@timed_out": {},
-  "to_import_subscriptions_from_an_existing_twitter_account_enter_your_username_below": "To import subscriptions from an existing X account, enter your username below.",
-  "@to_import_subscriptions_from_an_existing_twitter_account_enter_your_username_below": {},
   "toggle_all": "Toggle All",
   "@toggle_all": {},
   "trending": "Trending",
@@ -505,6 +645,10 @@
   "@true_black": {},
   "true_black_tweet_cards": "True black tweet cards?",
   "@true_black_tweet_cards": {},
+  "tweet_unavailable": "Post unavailable",
+  "@tweet_unavailable": {},
+  "tweet_unavailable_no_reason": "It was probably deleted, or comes from a private or suspended account.",
+  "@tweet_unavailable_no_reason": {},
   "tweets": "Posts",
   "@tweets": {},
   "tweets_and_replies": "Posts & Replies",
@@ -602,9 +746,7 @@
   "you_have_not_saved_any_tweets_yet": "You haven't saved any posts yet!",
   "@you_have_not_saved_any_tweets_yet": {},
   "you_must_have_at_least_2_home_screen_pages": "You must have at least 2 home screen pages",
-  "@you_must_have_at_least_2_home_screen_pages": {},
-  "your_profile_must_be_public_otherwise_the_import_will_not_work": "Your profile must be public, otherwise the import will not work",
-  "@your_profile_must_be_public_otherwise_the_import_will_not_work": {},
+  "@you_must_have_at_least_2_home_screen_pages": {}
   "unsupported_card": "Unsupported card, you can open the tweet in browser and also report the issue, with a link to the problematic tweet",
   "@unsupported_card": {}
 }

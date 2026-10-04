@@ -8,7 +8,7 @@
 [![Build Status](https://img.shields.io/github/actions/workflow/status/teskann/quax/ci.yml?style=for-the-badge&logo=github)](https://github.com/teskann/quax/actions)
 ![Minimum Android version](https://img.shields.io/badge/Android-7.0+-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 [![Downloads](https://img.shields.io/github/downloads/teskann/quax/total?style=for-the-badge&logo=github)](https://github.com/teskann/quax/releases)
-![Flutter version](https://img.shields.io/badge/Flutter-3.47.2-54C5F8?style=for-the-badge&logo=flutter&logoColor=white)
+![Flutter version](https://img.shields.io/badge/Flutter-3.47.5-54C5F8?style=for-the-badge&logo=flutter&logoColor=white)
 ![Target SDK](https://img.shields.io/badge/Target%20SDK-37-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 
 **QuaX** is a free, open-source, privacy-focused client for X (formerly Twitter). It is forked
@@ -17,7 +17,7 @@ and [Fritter](https://github.com/jonjomckay/fritter), and serves as an alternati
 to [Squawker](https://github.com/j-fbriere/squawker).
 
 [![Get it on GitHub](assets/readme/get-it-on-github.png)](https://github.com/teskann/quax/releases)
-[![Get it on Obtainium](assets/readme/get-it-on-obtainium.png)](https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/Teskann/QuaX)
+[![Get it on Obtainium](assets/readme/get-it-on-obtainium.png)](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/Teskann/QuaX)
 
 [![Join us on Discord](assets/discord.png)](https://discord.gg/K7UHuywPWD)
 

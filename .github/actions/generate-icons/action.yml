@@ -1,0 +1,16 @@
+name: Generate icons
+description: >
+  Generates the icons drawn from assets/icon.svg, which git does not track: the launcher icons, and
+  the monochrome one that the app also shows. The repository must be checked out first.
+
+runs:
+  using: composite
+  steps:
+    - name: Generate icons
+      shell: bash
+      run: |
+        python -mvenv .venv
+        source ./.venv/bin/activate
+        pip install -r requirements.txt
+        python generate_icons.py
+        deactivate

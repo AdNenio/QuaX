@@ -1,10 +1,10 @@
 import 'package:crypto/crypto.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_triple/flutter_triple.dart';
+import 'package:quax/constants.dart';
 import 'package:quax/client/client.dart';
 import 'package:quax/database/entities.dart';
 import 'package:quax/database/repository.dart';
-import 'package:quax/generated/l10n.dart';
 import 'package:quax/group/_feed.dart';
 import 'package:quax/group/_feed_shell.dart';
 import 'package:quax/group/feed_cache.dart';
@@ -113,7 +113,7 @@ class _SubscriptionGroupScreenContentState extends State<SubscriptionGroupScreen
       store: context.read<GroupModel>(),
       onLoading: (_) => _loadingView(),
       onError: (_, error) =>
-          ScaffoldErrorWidget(error: error, stackTrace: null, prefix: L10n.current.unable_to_load_the_group),
+          ScaffoldErrorWidget(error: error, stackTrace: null, prefix: (l10n) => l10n.unable_to_load_the_group),
       onState: (_, group) {
         // TODO: This is pretty gross. Figure out how to have a "no data" state
         if (group.id.isEmpty) {
@@ -123,7 +123,7 @@ class _SubscriptionGroupScreenContentState extends State<SubscriptionGroupScreen
         final filteredUsers = group.id == '-1' ? group.subscriptions.where((elm) => elm.inFeed) : group.subscriptions;
         final users = filteredUsers.sorted((a, b) => a.createdAt.compareTo(b.createdAt)).toList();
 
-        var chunks = partition(users, 16)
+        var chunks = partition(users, subscriptionsPerSearch)
             .map((e) => SubscriptionGroupFeedChunk(e, group.includeReplies, group.includeRetweets))
             .toList();
 

@@ -1,13 +1,15 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:quax/client/client.dart';
 import 'package:quax/constants.dart';
-import 'package:quax/generated/l10n.dart';
 import 'package:quax/profile/profile.dart';
+import 'package:quax/tweet/_media.dart';
 import 'package:quax/tweet/conversation.dart';
+import 'package:quax/tweet/unavailable_tweet.dart';
 import 'package:quax/ui/errors.dart';
 import 'package:infinite_scroll_pagination/infinite_scroll_pagination.dart';
 import 'package:pref/pref.dart';
 import 'package:provider/provider.dart';
+import 'package:quax/utils/iterables.dart';
 import 'package:quax/utils/paging.dart';
 import 'package:scroll_to_index/scroll_to_index.dart';
 
@@ -16,6 +18,7 @@ class StatusScreenArguments {
   final String? username;
   final bool tweetOpened;
   final int initialMediaIndex;
+  final bool openMediaFullScreen;
   final TweetWithCard? initialTweet;
 
   StatusScreenArguments(
@@ -23,6 +26,7 @@ class StatusScreenArguments {
       required this.username,
       this.tweetOpened = false,
       this.initialMediaIndex = 0,
+      this.openMediaFullScreen = false,
       this.initialTweet});
 
   @override
@@ -43,6 +47,7 @@ class StatusScreen extends StatelessWidget {
         id: args.id,
         tweetOpened: args.tweetOpened,
         initialMediaIndex: args.initialMediaIndex,
+        openMediaFullScreen: args.openMediaFullScreen,
         initialTweet: args.initialTweet);
   }
 }
@@ -52,6 +57,7 @@ class _StatusScreen extends StatefulWidget {
   final String id;
   final bool tweetOpened;
   final int initialMediaIndex;
+  final bool openMediaFullScreen;
   final TweetWithCard? initialTweet;
 
   const _StatusScreen(
@@ -59,6 +65,7 @@ class _StatusScreen extends StatefulWidget {
       required this.id,
       required this.tweetOpened,
       this.initialMediaIndex = 0,
+      this.openMediaFullScreen = false,
       this.initialTweet});
 
   @override
@@ -128,6 +135,30 @@ class _StatusScreenState extends State<_StatusScreen> {
     });
   }
 
+  void _openFocalTweetMedia(List<TweetChain> chains) {
+    final focal = chains.expand((chain) => chain.tweets).firstWhereOrNull((t) => t.idStr == widget.id);
+    final tweet = focal?.retweetedStatusWithCard ?? focal;
+    final media = tweet?.extendedEntities?.media;
+    if (tweet == null || media == null || media.isEmpty) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (context) => TweetMediaView(
+                  initialIndex: widget.initialMediaIndex.clamp(0, media.length - 1),
+                  media: media,
+                  username: tweet.user?.screenName ?? widget.username ?? '',
+                  tweetId: tweet.idStr)));
+    });
+  }
+
   Future<CursorPage<String, TweetChain>> _fetchPage(String? cursor) async {
     var result = await Twitter.getTweet(widget.id, cursor: cursor);
 
@@ -146,6 +177,10 @@ class _StatusScreenState extends State<_StatusScreen> {
     // On the first page (null cursor), anchor the view on the opened tweet.
     if (cursor == null) {
       _scrollToFocalTweet(chains);
+
+      if (widget.openMediaFullScreen) {
+        _openFocalTweetMedia(chains);
+      }
     }
 
     // No new tweets returned, or the cursor doesn't advance -> stop pagination.
@@ -204,36 +239,36 @@ class _StatusScreenState extends State<_StatusScreen> {
               controller: _scrollController,
               index: index,
               highlightColor: Theme.of(context).colorScheme.primary,
-              child: TweetConversation(
-                  id: chain.id,
-                  tweets: chain.tweets,
-                  username: null,
-                  isPinned: chain.isPinned,
-                  tweetOpened: widget.tweetOpened,
-                  initialMediaIndex: chain.id == widget.id ? widget.initialMediaIndex : 0),
+              child: chain.id == widget.id && (chain.tweets.single.isTombstone ?? false)
+                  ? _buildUnavailable(chain.tweets.single.text)
+                  : TweetConversation(
+                      id: chain.id,
+                      tweets: chain.tweets,
+                      username: null,
+                      isPinned: chain.isPinned,
+                      tweetOpened: widget.tweetOpened,
+                      initialMediaIndex: chain.id == widget.id ? widget.initialMediaIndex : 0),
             );
           },
           firstPageErrorIndicatorBuilder: (context) => FullPageErrorWidget(
             error: pagingErrorOf(state)?.error,
             stackTrace: pagingErrorOf(state)?.stackTrace,
-            prefix: L10n.of(context).unable_to_load_the_tweet,
+            prefix: (l10n) => l10n.unable_to_load_the_tweet,
             onRetry: fetchNextPage,
           ),
-          newPageErrorIndicatorBuilder: (context) => FullPageErrorWidget(
+          newPageErrorIndicatorBuilder: (context) => ErrorCard(
             error: pagingErrorOf(state)?.error,
             stackTrace: pagingErrorOf(state)?.stackTrace,
-            prefix: L10n.of(context).unable_to_load_the_next_page_of_replies,
+            prefix: (l10n) => l10n.unable_to_load_the_next_page_of_replies,
             onRetry: fetchNextPage,
           ),
-          noItemsFoundIndicatorBuilder: (context) {
-            return Center(
-              child: Text(
-                L10n.of(context).could_not_find_any_tweets_by_this_user,
-              ),
-            );
-          },
+          noItemsFoundIndicatorBuilder: (context) => _buildUnavailable(null),
         ),
       ),
     );
   }
+
+  /// The opened post, which X does not show. Its author is known when it was opened from a link or a quote
+  Widget _buildUnavailable(String? reason) =>
+      UnavailableTweetCard(reason: reason, screenName: widget.username, id: widget.id);
 }

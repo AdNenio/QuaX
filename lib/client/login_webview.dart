@@ -9,17 +9,32 @@ import 'package:quax/subscriptions/_import.dart' show SubscriptionImportScreen;
 import 'package:webview_cookie_manager_plus/webview_cookie_manager_plus.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+/// Logs in to X, then closes with the account. When [guided], another screen already explained the login and offers
+/// the next steps, so no dialog is shown.
 class TwitterLoginWebview extends StatefulWidget {
-  const TwitterLoginWebview({super.key});
+  final bool guided;
+
+  const TwitterLoginWebview({super.key, this.guided = false});
 
   @override
   State<TwitterLoginWebview> createState() => _TwitterLoginWebviewState();
 }
 
 class _TwitterLoginWebviewState extends State<TwitterLoginWebview> {
+  final _webviewCookieManager = WebviewCookieManager();
+  final _webviewController = WebViewController();
+
+  // X can report reaching its home page twice in a row. Handling both would save the account twice and close this
+  // page twice, the second time closing the screen under it too.
+  bool _loggingIn = false;
+
   @override
   void initState() {
     super.initState();
+    _setUpWebview();
+    if (widget.guided) {
+      return;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       showDialog(
         context: context,
@@ -39,25 +54,26 @@ class _TwitterLoginWebviewState extends State<TwitterLoginWebview> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    WebViewPlatform.instance;
-    final webviewCookieManager = WebviewCookieManager();
-    final webviewController = WebViewController();
-    webviewController.setJavaScriptMode(JavaScriptMode.unrestricted);
-    webviewController.loadRequest(Uri.https("x.com", "i/flow/login"));
-    webviewController.setUserAgent(userAgentHeader.toString());
-    webviewController.setNavigationDelegate(
+  void _setUpWebview() {
+    _webviewController.setJavaScriptMode(JavaScriptMode.unrestricted);
+    _webviewController.loadRequest(Uri.https("x.com", "i/flow/login"));
+    _webviewController.setUserAgent(userAgentHeader.toString());
+    _webviewController.setNavigationDelegate(
       NavigationDelegate(
         onUrlChange: (change) async {
-          if (change.url == "https://x.com/home") {
-            final cookies = await webviewCookieManager.getCookies("https://x.com/i/flow/login");
-            String screenName = (await webviewController.runJavaScriptReturningResult(
+          if (change.url == "https://x.com/home" && !_loggingIn) {
+            _loggingIn = true;
+            final cookies = await _webviewCookieManager.getCookies("https://x.com/i/flow/login");
+            String screenName = (await _webviewController.runJavaScriptReturningResult(
               "document.documentElement.outerHTML.match(/\"screen_name\":\"([^\"]+)\"/)?.[1] ?? '';",
             )).toString();
             screenName = screenName.replaceAll('"', '');
-            if (screenName == "") return;
+            if (screenName == "") {
+              _loggingIn = false;
+              return;
+            }
 
+            Account? account;
             try {
               final expCt0 = RegExp(r'(ct0=(.+?));');
               final RegExpMatch? matchCt0 = expCt0.firstMatch(cookies.toString());
@@ -79,14 +95,14 @@ class _TwitterLoginWebviewState extends State<TwitterLoginWebview> {
                   "x-csrf-token": csrfToken,
                 };
 
+                account = Account(id: csrfToken, screenName: screenName, authHeader: json.encode(authHeader));
                 final database = await Repository.writable();
-                database.insert(
-                  tableAccounts,
-                  Account(id: csrfToken, screenName: screenName, authHeader: json.encode(authHeader)).toMap(),
-                );
+                await database.insert(tableAccounts, account.toMap());
                 database.close();
               }
-              if (context.mounted) {
+              if (mounted && widget.guided) {
+                Navigator.pop(context, account);
+              } else if (mounted) {
                 Navigator.pop(context);
                 await showDialog(
                   context: context,
@@ -98,7 +114,8 @@ class _TwitterLoginWebviewState extends State<TwitterLoginWebview> {
                       TextButton(
                         onPressed: () {
                           Navigator.pop(context);
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionImportScreen()));
+                          Navigator.push(context,
+                              MaterialPageRoute(builder: (_) => SubscriptionImportScreen(screenName: screenName)));
                         },
                         child: Text(L10n.of(context).yes),
                       ),
@@ -113,9 +130,13 @@ class _TwitterLoginWebviewState extends State<TwitterLoginWebview> {
         },
       ),
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(toolbarHeight: 50),
-      body: WebViewWidget(controller: webviewController),
+      body: WebViewWidget(controller: _webviewController),
     );
   }
 }

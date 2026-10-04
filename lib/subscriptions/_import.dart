@@ -3,18 +3,18 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
-import 'package:quax/client/client.dart';
-import 'package:quax/database/entities.dart';
-import 'package:quax/database/repository.dart';
 import 'package:quax/group/group_model.dart';
 import 'package:quax/import_data_model.dart';
+import 'package:quax/subscriptions/subscription_importer.dart';
 import 'package:quax/subscriptions/users_model.dart';
 import 'package:quax/ui/errors.dart';
 import 'package:provider/provider.dart';
 import 'package:quax/generated/l10n.dart';
 
 class SubscriptionImportScreen extends StatefulWidget {
-  const SubscriptionImportScreen({super.key});
+  final String? screenName;
+
+  const SubscriptionImportScreen({super.key, this.screenName});
 
   @override
   State<SubscriptionImportScreen> createState() => _SubscriptionImportScreenState();
@@ -23,6 +23,12 @@ class SubscriptionImportScreen extends StatefulWidget {
 class _SubscriptionImportScreenState extends State<SubscriptionImportScreen> {
   String? _screenName;
   StreamController<int>? _streamController;
+
+  @override
+  void initState() {
+    super.initState();
+    _screenName = widget.screenName;
+  }
 
   Future importSubscriptions() async {
     setState(() {
@@ -35,159 +41,152 @@ class _SubscriptionImportScreenState extends State<SubscriptionImportScreen> {
         return;
       }
 
-      _streamController?.add(0);
+      var importer = SubscriptionImporter(
+          context.read<ImportDataModel>(), context.read<GroupsModel>(), context.read<SubscriptionsModel>());
 
-      String? cursor;
-      int total = 0;
-      var seenIds = <String>{};
-
-      var importModel = context.read<ImportDataModel>();
-      var groupModel = context.read<GroupsModel>();
-
-      var createdAt = DateTime.now();
-
-      while (true) {
-        var response = await Twitter.getProfileFollows(
-          screenName,
-          'following',
-          cursor: cursor,
-        );
-
-        var next = response.cursorBottom;
-        var fresh = response.users.where((e) => e.idStr != null && seenIds.add(e.idStr!)).toList();
-
-        if (fresh.isNotEmpty) {
-          total = total + fresh.length;
-          await importModel.importData({
-            tableSubscription: [
-              ...fresh.map((e) => UserSubscription(
-                  id: e.idStr!,
-                  name: e.name!,
-                  profileImageUrlHttps: e.profileImageUrlHttps,
-                  screenName: e.screenName!,
-                  verified: e.verified ?? false,
-                  createdAt: createdAt,
-                  inFeed: true
-              ))
-            ]
-          });
-
-          _streamController?.add(total);
-        }
-
-        if (next == null || next.isEmpty || next == '0' || next == cursor || fresh.isEmpty) {
-          break;
-        }
-        cursor = next;
+      var maxCount = await _chooseHowMany(await importer.size(screenName));
+      if (maxCount == null) {
+        if (mounted) setState(() => _streamController = null);
+        return;
       }
 
-      await groupModel.reloadGroups();
-      await context.read<SubscriptionsModel>().reloadSubscriptions();
+      _streamController?.add(0);
+      await _streamController?.addStream(importer.import(screenName, maxCount));
       _streamController?.close();
     } catch (e, stackTrace) {
       _streamController?.addError(e, stackTrace);
     }
   }
 
+  /// How many subscriptions to import: all of them, unless there are more than X lets the feeds load and the user
+  /// chooses fewer. Null when the user cancels.
+  Future<int?> _chooseHowMany(SubscriptionImportSize size) async {
+    var count = size.count;
+    var limit = size.limit;
+    if (count == null || !size.exceedsLimit || !mounted) {
+      return count ?? 1 << 31; // unknown count: import everything
+    }
+    return showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(L10n.of(context).import_subscriptions),
+        content: Text(L10n.of(context).import_too_many_subscriptions_warning(count.toString(), limit.toString())),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, count),
+              child: Text(L10n.of(context).import_count_subscriptions(count))),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, limit),
+              child: Text(L10n.of(context).import_count_subscriptions(limit))),
+        ],
+      ),
+    );
+  }
+
+  Widget _intro(BuildContext context) {
+    final theme = Theme.of(context);
+    return Text(L10n.of(context).import_subscriptions_intro,
+        style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant));
+  }
+
+  Widget _field(BuildContext context, bool running) => ImportUsernameField(
+      initialValue: widget.screenName, enabled: !running, onChanged: (value) => setState(() => _screenName = value));
+
+  Widget _status(BuildContext context, AsyncSnapshot<int> snapshot) {
+    final l10n = L10n.of(context);
+    if (snapshot.error != null) {
+      return ErrorCard(error: snapshot.error, stackTrace: snapshot.stackTrace, prefix: (l10n) => l10n.unable_to_import);
+    }
+    return switch (snapshot.connectionState) {
+      ConnectionState.none || ConnectionState.waiting => const SizedBox.shrink(),
+      ConnectionState.active => Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 8, children: [
+          // ignore: deprecated_member_use
+          const LinearProgressIndicator(year2023: false),
+          Text(l10n.imported_snapshot_data_users_so_far(snapshot.data.toString())),
+        ]),
+      ConnectionState.done => ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.check_circle, size: 36, color: Theme.of(context).colorScheme.primary),
+          title: Text(l10n.subscriptions_imported(snapshot.data ?? 0)),
+        ),
+    };
+  }
+
+  Widget _importButton(BuildContext context, bool running) {
+    final canImport = !running && (_screenName?.isNotEmpty ?? false);
+    return FilledButton.icon(
+      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
+      onPressed: canImport ? importSubscriptions : null,
+      icon: const Icon(Icons.download),
+      label: Text(L10n.of(context).import),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(L10n.of(context).import_subscriptions)),
-      body: Padding(
-          padding: EdgeInsets.all(8.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Text(
-                  L10n.of(context).to_import_subscriptions_from_an_existing_twitter_account_enter_your_username_below,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Text(
-                  L10n.of(context)
-                      .please_note_that_the_method_fritter_uses_to_import_subscriptions_is_heavily_rate_limited_by_twitter_so_this_may_fail_if_you_have_a_lot_of_followed_accounts,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: TextFormField(
-                  decoration: InputDecoration(
-                    border: const OutlineInputBorder(),
-                    hintText: L10n.of(context).enter_your_twitter_username,
-                    helperText: L10n.of(context).your_profile_must_be_public_otherwise_the_import_will_not_work,
-                    prefixText: '@',
-                    labelText: L10n.of(context).username,
+      body: SafeArea(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: StreamBuilder<int>(
+              stream: _streamController?.stream,
+              builder: (context, snapshot) {
+                final running = snapshot.connectionState == ConnectionState.active && snapshot.error == null;
+                return Column(children: [
+                  Expanded(
+                    child: ListView(padding: const EdgeInsets.all(16), children: [
+                      _intro(context),
+                      const SizedBox(height: 24),
+                      _field(context, running),
+                      const SizedBox(height: 16),
+                      _status(context, snapshot),
+                    ]),
                   ),
-                  maxLength: 15,
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^[a-zA-Z0-9_]+'))],
-                  onChanged: (value) {
-                    setState(() {
-                      _screenName = value;
-                    });
-                  },
-                ),
-              ),
-              Center(
-                child: StreamBuilder(
-                  stream: _streamController?.stream,
-                  builder: (context, snapshot) {
-                    var error = snapshot.error;
-                    if (error != null) {
-                      return FullPageErrorWidget(
-                        error: snapshot.error,
-                        stackTrace: snapshot.stackTrace,
-                        prefix: L10n.of(context).unable_to_import,
-                      );
-                    }
-
-                    switch (snapshot.connectionState) {
-                      case ConnectionState.none:
-                      case ConnectionState.waiting:
-                        return Container();
-                      case ConnectionState.active:
-                        return Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Padding(
-                              padding: EdgeInsets.all(16),
-                              child: CircularProgressIndicator(),
-                            ),
-                            Text(
-                              L10n.of(context).imported_snapshot_data_users_so_far(
-                                snapshot.data.toString(),
-                              ),
-                            )
-                          ],
-                        );
-                      default:
-                        return Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Icon(Icons.check_circle, size: 36, color: Colors.green),
-                            ),
-                            Text(
-                              L10n.of(context).finished_with_snapshotData_users(
-                                snapshot.data.toString(),
-                              ),
-                            )
-                          ],
-                        );
-                    }
-                  },
-                ),
-              ),
-            ],
-          )),
-      floatingActionButton: FloatingActionButton(
-        child: const Icon(Icons.cloud_download),
-        onPressed: () async => await importSubscriptions(),
+                  Padding(padding: const EdgeInsets.all(16), child: _importButton(context, running)),
+                ]);
+              },
+            ),
+          ),
+        ),
       ),
+    );
+  }
+}
+
+/// The username of the X account to import the subscriptions of
+class ImportUsernameField extends StatelessWidget {
+  final String? initialValue;
+  final bool enabled;
+  final ValueChanged<String> onChanged;
+  final ValueChanged<String>? onSubmitted;
+
+  const ImportUsernameField(
+      {super.key, this.initialValue, this.enabled = true, required this.onChanged, this.onSubmitted});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    // Shaped like the Material 3 search bar, as the user looks an account up
+    return TextFormField(
+      initialValue: initialValue,
+      enabled: enabled,
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: colors.surfaceContainerHigh,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(28), borderSide: BorderSide.none),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        prefixIcon: const Padding(padding: EdgeInsetsDirectional.only(start: 12), child: Icon(Icons.alternate_email)),
+        hintText: L10n.of(context).username,
+        counterText: '',
+      ),
+      maxLength: 15,
+      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^[a-zA-Z0-9_]+'))],
+      textInputAction: TextInputAction.go,
+      onChanged: onChanged,
+      onFieldSubmitted: onSubmitted,
     );
   }
 }

@@ -11,6 +11,7 @@ import 'package:quax/generated/l10n.dart';
 import 'package:quax/profile/profile.dart';
 import 'package:quax/tweet/_photo.dart';
 import 'package:quax/tweet/_video.dart';
+import 'package:quax/tweet/_video_controls.dart';
 import 'package:quax/ui/errors.dart';
 import 'package:quax/utils/downloads.dart';
 import 'package:path/path.dart' as path;
@@ -289,6 +290,14 @@ class _TweetMediaViewState extends State<TweetMediaView> {
               return IconButton(onPressed: callback, icon: child);
             },
             onPressed: () async {
+              if (_media.type == 'animated_gif') {
+                var urls = await TweetVideoMetadata.fromMedia(_media).streamUrlsBuilder();
+                if (context.mounted) {
+                  await downloadTweetVideo(context, widget.username, urls.downloadUrl);
+                }
+                return;
+              }
+
               var url = path.basename(_media.mediaUrlHttps!);
               var fileName = '${widget.username}-$url';
               var uri = Uri.parse(originalMediaUrl());
@@ -325,7 +334,7 @@ class _TweetMediaViewState extends State<TweetMediaView> {
               // The following is a workaround because of an issue with the share_plus package which uses the faulty mime_type library.
               // When the issue is resolved (the PR https://github.com/dart-lang/mime/pull/81 is merged),
               // then it should be replaced by the original code:
-              // Share.shareXFiles([XFile.fromData(fileBytes, mimeType: 'image/jpeg')]);
+              // SharePlus.instance.share(ShareParams(files: [XFile.fromData(fileBytes, mimeType: 'image/jpeg')]));
               const uuid = Uuid();
 
               final String tempPath = (await getTemporaryDirectory()).path;
@@ -337,7 +346,7 @@ class _TweetMediaViewState extends State<TweetMediaView> {
 
               final xfile = XFile(path, mimeType: 'image/jpeg');
 
-              Share.shareXFiles([xfile]).then((value) => file.delete());
+              SharePlus.instance.share(ShareParams(files: [xfile])).then((value) => file.delete());
             },
             child: const Icon(Icons.share),
           ),

@@ -5,13 +5,19 @@ import 'package:async_button_builder/async_button_builder.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:quax/catcher/exceptions.dart';
 
 import 'package:quax/client/client.dart';
 import 'package:quax/client/login_webview.dart';
 import 'package:quax/constants.dart';
 import 'package:quax/generated/l10n.dart';
+import 'package:quax/tweet/tweet.dart';
+import 'package:quax/utils/bug_report.dart';
+import 'package:quax/utils/urls.dart';
 
 void showSnackBar(BuildContext context, {required String icon, required String message, bool clearBefore = true}) {
   if (clearBefore) {
@@ -28,6 +34,9 @@ void showSnackBar(BuildContext context, {required String icon, required String m
     ),
   ));
 }
+
+/// Picks the message explaining what failed, so that it can be read in any language
+typedef ErrorPrefix = String Function(L10n l10n);
 
 abstract class FritterErrorWidget extends StatelessWidget {
   const FritterErrorWidget({super.key});
@@ -46,43 +55,16 @@ class UnknownTwitterErrorCode with SyntheticException implements Exception {
   }
 }
 
-EmojiErrorWidget createEmojiError(TwitterError error) {
-  String emoji;
-  String message;
-
-  switch (error.code) {
-    case 22:
-      emoji = '🔒';
-      message = L10n.current.private_profile;
-      break;
-    case 34:
-      emoji = '🤔';
-      message = L10n.current.page_not_found;
-      break;
-    case 50:
-      emoji = '🕵️';
-      message = L10n.current.user_not_found;
-      break;
-    case 63:
-      emoji = '👮';
-      message = L10n.current.account_suspended;
-      break;
-    case 200:
-      emoji = '⛔';
-      message = L10n.current.forbidden;
-      break;
-    case 239:
-      emoji = '💩';
-      message = L10n.current.bad_guest_token;
-      break;
-    default:
-      emoji = '💥';
-      message = L10n.current.catastrophic_failure;
-      break;
-  }
-
-  return EmojiErrorWidget(emoji: emoji, message: message, errorMessage: error.message);
-}
+/// Message explaining a known X error code
+String twitterErrorMessage(TwitterError error) => switch (error.code) {
+      22 => L10n.current.private_profile,
+      34 => L10n.current.page_not_found,
+      50 => L10n.current.user_not_found,
+      63 => L10n.current.account_suspended,
+      200 => L10n.current.forbidden,
+      239 => L10n.current.bad_guest_token,
+      _ => L10n.current.catastrophic_failure,
+    };
 
 class EmojiErrorWidget extends FritterErrorWidget {
   final String emoji;
@@ -166,110 +148,9 @@ class EmojiErrorWidget extends FritterErrorWidget {
   }
 }
 
-/// Shared layout for actionable error screens: emoji, title, details and a row
-/// of action buttons.
-class ActionableErrorWidget extends FritterErrorWidget {
-  final String emoji;
-  final String title;
-  final String details;
-  final List<Widget> actions;
-
-  const ActionableErrorWidget(
-      {super.key, required this.emoji, required this.title, required this.details, required this.actions});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      alignment: Alignment.center,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            child: Text(emoji, style: const TextStyle(fontSize: 36)),
-          ),
-          Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 18)),
-          Container(
-            margin: const EdgeInsets.only(top: 12),
-            child: Text(details, textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).hintColor)),
-          ),
-          Container(
-            margin: const EdgeInsets.only(top: 12),
-            child: Wrap(alignment: WrapAlignment.center, spacing: 12, runSpacing: 12, children: actions),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Button that opens the X login flow to add another account.
-Widget addAccountButton(BuildContext context) => ElevatedButton.icon(
-      icon: const Icon(Icons.person_add),
-      label: Text(L10n.of(context).add_account),
-      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TwitterLoginWebview())),
-    );
-
-class NoAccountErrorWidget extends FritterErrorWidget {
-  final Function? onRetry;
-
-  const NoAccountErrorWidget({super.key, this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return ActionableErrorWidget(
-      emoji: '🔑',
-      title: L10n.of(context).no_account_available_title,
-      details: L10n.of(context).no_account_available_message,
-      actions: [
-        addAccountButton(context),
-        if (onRetry != null)
-          TextButton(child: Text(L10n.of(context).retry), onPressed: () => onRetry!()),
-      ],
-    );
-  }
-}
-
-class RateLimitErrorWidget extends FritterErrorWidget {
-  final Function? onRetry;
-
-  const RateLimitErrorWidget({super.key, this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return ActionableErrorWidget(
-      emoji: '⏳',
-      title: L10n.of(context).rate_limited_title,
-      details: L10n.of(context).rate_limited_message,
-      actions: [
-        addAccountButton(context),
-        if (onRetry != null)
-          TextButton(child: Text(L10n.of(context).retry), onPressed: () => onRetry!()),
-      ],
-    );
-  }
-}
-
-class NoWorkingAccountErrorWidget extends FritterErrorWidget {
-  final Function? onRetry;
-
-  const NoWorkingAccountErrorWidget({super.key, this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return ActionableErrorWidget(
-      emoji: '🤷',
-      title: L10n.of(context).no_working_account_title,
-      details: L10n.of(context).no_working_account_message,
-      actions: [
-        addAccountButton(context),
-        if (onRetry != null)
-          TextButton(child: Text(L10n.of(context).retry), onPressed: () => onRetry!()),
-      ],
-    );
-  }
-}
+/// Opens the X login flow to add another account.
+void openAddAccount(BuildContext context) =>
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const TwitterLoginWebview()));
 
 class InlineErrorWidget extends FritterErrorWidget {
   final Object? error;
@@ -297,7 +178,7 @@ class InlineErrorWidget extends FritterErrorWidget {
 class AlertErrorWidget extends FritterErrorWidget {
   final Object? error;
   final StackTrace? stackTrace;
-  final String prefix;
+  final ErrorPrefix prefix;
 
   const AlertErrorWidget({super.key, required this.error, required this.stackTrace, required this.prefix});
 
@@ -312,7 +193,7 @@ class AlertErrorWidget extends FritterErrorWidget {
 class ScaffoldErrorWidget extends FritterErrorWidget {
   final Object? error;
   final StackTrace? stackTrace;
-  final String prefix;
+  final ErrorPrefix prefix;
   final Function? onRetry;
   final String? retryText;
 
@@ -332,99 +213,264 @@ class ScaffoldErrorWidget extends FritterErrorWidget {
 class FullPageErrorWidget extends FritterErrorWidget {
   final Object? error;
   final StackTrace? stackTrace;
-  final String prefix;
+  final ErrorPrefix prefix;
   final Function? onRetry;
   final String? retryText;
 
+  /// Profile the error is about, mentioned in bug reports
+  final String? screenName;
+
   const FullPageErrorWidget(
-      {super.key, required this.error, required this.stackTrace, required this.prefix, this.onRetry, this.retryText});
+      {super.key,
+      required this.error,
+      required this.stackTrace,
+      required this.prefix,
+      this.onRetry,
+      this.retryText,
+      this.screenName});
 
   @override
   Widget build(BuildContext context) {
-    var onRetry = this.onRetry;
+    final card = SingleChildScrollView(
+      child: ErrorCard(
+          error: error,
+          stackTrace: stackTrace,
+          prefix: prefix,
+          onRetry: onRetry,
+          retryText: retryText,
+          screenName: screenName),
+    );
+    // Outside a scroll view, the error stands for a whole screen and must avoid the system bars itself. Inside one,
+    // it sits below content that already does, such as a collapsing app bar, which leaves the padding in place
+    return Scrollable.maybeOf(context) == null ? SafeArea(child: card) : card;
+  }
+}
 
-    var error = this.error;
-    if (error is SocketException) {
-      return EmojiErrorWidget(
-        emoji: '🔌',
-        message: L10n.of(context).could_not_contact_twitter,
-        errorMessage: L10n.of(context).please_check_your_internet_connection_error_message(error.message),
-        onRetry: onRetry,
-      );
-    }
+/// Opens a GitHub issue prefilled with the error, the [screenName] of the profile it is about and the app version
+Future<void> reportBug(BuildContext context,
+    {required ErrorPrefix prefix, required Object? error, required StackTrace? stackTrace, String? screenName}) async {
+  // In English whatever the language of the app, so that every report can be read
+  final l10n = L10n.of(context);
+  final englishPrefix = Intl.withLocale('en', () => prefix(l10n));
+  final version = (await PackageInfo.fromPlatform()).version;
+  if (!context.mounted) return;
+  final uri = bugReportUri(englishPrefix, error, stackTrace, version: version, screenName: screenName);
+  await openUri(context, uri.toString());
+}
 
-    if (error is NoAccountAvailableException) {
-      return NoAccountErrorWidget(onRetry: onRetry);
-    }
+enum _PrimaryAction { report, addAccount, retry }
 
-    if (error is RateLimitedException) {
-      return RateLimitErrorWidget(onRetry: onRetry);
-    }
+typedef _CardContent = ({IconData icon, String title, String details, _PrimaryAction? primary});
 
-    if (error is NoWorkingAccountException) {
-      return NoWorkingAccountErrorWidget(onRetry: onRetry);
-    }
+/// Card explaining an error, with the action most likely to fix it. Used alone inside lists, and by
+/// [FullPageErrorWidget] when there is nothing else to show
+class ErrorCard extends StatelessWidget {
+  final Object? error;
+  final StackTrace? stackTrace;
+  final ErrorPrefix prefix;
+  final Function? onRetry;
+  final String? retryText;
 
-    if (error is TwitterError) {
-      return createEmojiError(error);
-    }
+  /// Profile the error is about, mentioned in bug reports
+  final String? screenName;
 
-    if (error is TimeoutException) {
-      return EmojiErrorWidget(
-        emoji: '⏱️',
-        message: L10n.of(context).timed_out,
-        errorMessage: L10n.of(context).this_took_too_long_to_load_please_check_your_network_connection,
-        onRetry: onRetry,
-      );
-    }
+  const ErrorCard(
+      {super.key,
+      required this.error,
+      required this.stackTrace,
+      required this.prefix,
+      this.onRetry,
+      this.retryText,
+      this.screenName});
 
-    return SingleChildScrollView(
-      child: Container(
-        alignment: Alignment.center,
-        constraints: const BoxConstraints(maxHeight: 500),
-        margin: const EdgeInsets.all(16),
+  _CardContent _content(L10n l10n) {
+    final error = this.error;
+    return switch (error) {
+      SocketException(:final message) => (
+          icon: Icons.wifi_off,
+          title: l10n.could_not_contact_twitter,
+          details: l10n.please_check_your_internet_connection_error_message(message),
+          primary: null,
+        ),
+      NoAccountAvailableException() => (
+          icon: Icons.key,
+          title: l10n.no_account_available_title,
+          details: l10n.no_account_available_message,
+          primary: _PrimaryAction.addAccount,
+        ),
+      FeedRateLimitedException(:final availableAt, :final loaded, :final total) => (
+          icon: Icons.hourglass_empty,
+          title: l10n.feed_rate_limited_title,
+          details: availableAt == null
+              ? l10n.feed_rate_limited_message(loaded.toString(), total.toString())
+              : l10n.feed_rate_limited_until_message(_time(availableAt), loaded.toString(), total.toString()),
+          primary: _PrimaryAction.addAccount,
+        ),
+      RateLimitedException(:final availableAt) => (
+          icon: Icons.hourglass_empty,
+          title: availableAt == null ? l10n.rate_limited_title : l10n.rate_limited_until_title(_time(availableAt)),
+          details: l10n.rate_limited_message,
+          primary: _PrimaryAction.addAccount,
+        ),
+      NotFoundException() => (
+          icon: Icons.search_off,
+          title: l10n.not_found_title,
+          details: l10n.not_found_message,
+          primary: _PrimaryAction.retry,
+        ),
+      TwitterError() => (
+          icon: Icons.error_outline,
+          title: twitterErrorMessage(error),
+          details: error.message,
+          primary: null,
+        ),
+      TimeoutException() => (
+          icon: Icons.timer_off,
+          title: l10n.timed_out,
+          details: l10n.this_took_too_long_to_load_please_check_your_network_connection,
+          primary: null,
+        ),
+      _ => (icon: Icons.error_outline, title: prefix(l10n), details: '$error', primary: _PrimaryAction.report),
+    };
+  }
+
+  String _time(DateTime dateTime) => DateFormat.jm().format(dateTime.toLocal());
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = L10n.of(context);
+    final content = _content(l10n);
+    final onRetry = this.onRetry;
+    final primary = content.primary == _PrimaryAction.retry && onRetry == null ? null : content.primary;
+
+    return StatusCard(icon: content.icon, title: content.title, details: content.details, actions: [
+      if (onRetry != null && primary != _PrimaryAction.retry)
+        TextButton(
+          onPressed: () => onRetry(),
+          child: Text(retryText ?? l10n.retry),
+        ),
+      if (primary != null) _primaryButton(context, primary),
+    ]);
+  }
+
+  Widget _primaryButton(BuildContext context, _PrimaryAction action) {
+    final l10n = L10n.of(context);
+    return switch (action) {
+      _PrimaryAction.report => FilledButton(
+          onPressed: () =>
+              reportBug(context, prefix: prefix, error: error, stackTrace: stackTrace, screenName: screenName),
+          child: Text(l10n.report),
+        ),
+      _PrimaryAction.addAccount => FilledButton(
+          onPressed: () => openAddAccount(context),
+          child: Text(l10n.add_account),
+        ),
+      _PrimaryAction.retry => FilledButton(
+          onPressed: () => onRetry?.call(),
+          child: Text(retryText ?? l10n.retry),
+        ),
+    };
+  }
+}
+
+/// Card with a red icon, a title, details and actions, shared by errors and unavailable posts
+class StatusCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String details;
+  final List<Widget> actions;
+  final EdgeInsetsGeometry margin;
+
+  const StatusCard(
+      {super.key,
+      required this.icon,
+      required this.title,
+      required this.details,
+      required this.actions,
+      this.margin = const EdgeInsets.all(12)});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: tweetCardColor(context),
+      margin: margin,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              child: Icon(Icons.error_outline,
-                  color: Colors.red.harmonizeWith(Theme.of(context).colorScheme.primary), size: 36),
-            ),
-            Text(
-              L10n.of(context).oops_something_went_wrong,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 18),
-            ),
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              child: Text(
-                prefix,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Theme.of(context).hintColor),
-              ),
-            ),
-            Container(
-              alignment: Alignment.center,
-              margin: const EdgeInsets.only(top: 12),
-              child: Text('$error', textAlign: TextAlign.left, style: TextStyle(color: Theme.of(context).hintColor)),
-            ),
-            Container(
-              alignment: Alignment.center,
-              margin: const EdgeInsets.only(top: 12),
-              child: Text('$stackTrace', textAlign: TextAlign.left, style: TextStyle(color: Theme.of(context).hintColor)),
-            ),
-            if (onRetry != null)
-              Container(
-                margin: const EdgeInsets.only(top: 12),
-                child: ElevatedButton(
-                  child: Text(retryText ?? L10n.current.retry),
-                  onPressed: () => onRetry(),
-                ),
-              )
+            _texts(context),
+            if (actions.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              OverflowBar(alignment: MainAxisAlignment.end, spacing: 4, children: actions),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _texts(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Icon(icon, size: 32, color: Colors.red.harmonizeWith(colors.primary)),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, style: theme.textTheme.titleMedium),
+          const SizedBox(height: 6),
+          _ExpandableDetails(text: details, style: theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
+        ]),
+      ),
+    ]);
+  }
+}
+
+/// Error details clamped to a few lines, which unfold with an animation when tapped
+class _ExpandableDetails extends StatefulWidget {
+  final String text;
+  final TextStyle? style;
+
+  const _ExpandableDetails({required this.text, required this.style});
+
+  @override
+  State<_ExpandableDetails> createState() => _ExpandableDetailsState();
+}
+
+class _ExpandableDetailsState extends State<_ExpandableDetails> {
+  static const _collapsedLines = 2;
+
+  final _textKey = GlobalKey();
+  bool _expanded = false;
+  bool _overflows = false;
+
+  void _checkOverflow(Duration _) {
+    final paragraph = _textKey.currentContext?.findRenderObject();
+    if (!mounted || _expanded || paragraph is! RenderParagraph) return;
+    if (paragraph.didExceedMaxLines != _overflows) {
+      setState(() => _overflows = paragraph.didExceedMaxLines);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback(_checkOverflow);
+    final text = Text(widget.text,
+        key: _textKey,
+        maxLines: _expanded ? null : _collapsedLines,
+        overflow: _expanded ? null : TextOverflow.ellipsis,
+        style: widget.style);
+    if (!_overflows) return text;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => setState(() => _expanded = !_expanded),
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        alignment: Alignment.topCenter,
+        child: text,
       ),
     );
   }

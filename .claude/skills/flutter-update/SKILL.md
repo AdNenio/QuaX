@@ -29,19 +29,22 @@ check whether it still describes reality, and take the entry out when it does no
 catches the resolution conflicts and the verification build catches the rest, so put back only what
 actually breaks. Every override is a liability, so aim to leave fewer behind than you found. Say in
 the summary which ones you dropped and which you kept, with the reason. Remove comments if they
-don't apply anymore.
+don't apply anymore. Also check changelogs of dependencies and check which one migrated to
+`material_ui` package instead of `flutter/material`. Once there is no legacy material widgets,
+remove the `MaterialUiCompatibilityBridge`.
+Also remove workarounds in the code if they have been fixed by the dependency upgrade.
 
 ## Verify
 
-Run the codegen from `CLAUDE.md`, then `flutter analyze` and `flutter build apk --debug`. Fix what
-the upgrade broke, nothing else. The workflow re-runs both as a gate and opens no pull request if
-either fails.
+Run the codegen from `CLAUDE.md`, then `flutter analyze` and `flutter build apk --debug`.
+Fix all issues until it succeeds. The tests must also pass. The workflow re-runs both as a gate and
+opens no pull request if either fails.
 
 Never touch the `version:` line, `changelog.md` or `release-notes.md`.
 
 ## Write the summary
 
-Write `/tmp/flutter-update-pr.md`:
+Write `flutter-update-pr.md` at the root of the repository (it is gitignored), not in `/tmp`:
 
 - **First line**: the commit message, reused as the pull request title, e.g.
   `Upgraded Flutter to 3.47.2 and refreshed the dependencies`. It goes into the release notes

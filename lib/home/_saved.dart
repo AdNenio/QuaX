@@ -150,16 +150,10 @@ class _SavedScreenState extends State<SavedScreen> with AutomaticKeepAliveClient
           }
         }
 
-        return SizedBox(
-          height: 52,
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(children: chips),
-            ),
-          ),
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: Row(children: chips),
         );
       },
     );
@@ -257,7 +251,7 @@ class _SavedScreenState extends State<SavedScreen> with AutomaticKeepAliveClient
       onError: (_, e) => FullPageErrorWidget(
         error: e,
         stackTrace: null,
-        prefix: L10n.current.unable_to_load_the_tweets,
+        prefix: (l10n) => l10n.unable_to_load_the_tweets,
         onRetry: () => model.listSavedTweets(),
       ),
       onLoading: (_) => const Center(child: CircularProgressIndicator()),
@@ -284,7 +278,7 @@ class _SavedScreenState extends State<SavedScreen> with AutomaticKeepAliveClient
       onError: (_, e) => FullPageErrorWidget(
         error: e,
         stackTrace: null,
-        prefix: L10n.current.unable_to_load_the_tweets,
+        prefix: (l10n) => l10n.unable_to_load_the_tweets,
         onRetry: () => model.listLikedTweets(),
       ),
       onLoading: (_) => const Center(child: CircularProgressIndicator()),

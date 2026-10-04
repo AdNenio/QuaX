@@ -5,6 +5,10 @@ import 'package:quax/generated/l10n.dart';
 import 'package:pref/pref.dart';
 import 'package:quax/utils/iterables.dart';
 
+/// The theme colors offered to the user
+Iterable<MapEntry<String, Color>> get selectableThemeColors =>
+    themeColors.entries.getRange(0, themeColors.values.length - 1);
+
 class SettingsThemeFragment extends StatelessWidget {
   const SettingsThemeFragment({super.key});
 
@@ -33,19 +37,10 @@ class SettingsThemeFragment extends StatelessWidget {
           ]),
           PrefDropdown(title: Text(L10n.of(context).theme), fullWidth: false, pref: optionThemeColor, items: [
             const DropdownMenuItem(value: 'accent', child: Text('Accent')),
-            ...themeColors.entries.getRange(0, themeColors.values.length - 1).map(
+            ...selectableThemeColors.map(
                 (scheme) => DropdownMenuItem(value: scheme.key, child: Text(toBeginningOfSentenceCase(scheme.key)!)))
           ]),
-          PrefSwitch(
-            title: Text(L10n.of(context).true_black),
-            pref: optionThemeTrueBlack,
-            subtitle: Text(
-              L10n.of(context).use_true_black_for_the_dark_mode_theme,
-            ),
-            onChange: (bool changeValue) {
-              prefs.set(optionThemeTrueBlackTweetCards, changeValue);
-            },
-          ),
+          const TrueBlackPref(),
           PrefSwitch(
             title: Text(L10n.of(context).true_black_tweet_cards),
             pref: optionThemeTrueBlackTweetCards,
@@ -60,6 +55,26 @@ class SettingsThemeFragment extends StatelessWidget {
           ),
         ]),
       ),
+    );
+  }
+}
+
+class TrueBlackPref extends StatelessWidget {
+  const TrueBlackPref({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final BasePrefService prefs = PrefService.of(context);
+
+    return PrefSwitch(
+      title: Text(L10n.of(context).true_black),
+      pref: optionThemeTrueBlack,
+      subtitle: Text(
+        L10n.of(context).use_true_black_for_the_dark_mode_theme,
+      ),
+      onChange: (bool changeValue) {
+        prefs.set(optionThemeTrueBlackTweetCards, changeValue);
+      },
     );
   }
 }

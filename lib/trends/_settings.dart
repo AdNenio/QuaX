@@ -39,7 +39,7 @@ class _TrendsSettingsState extends State<TrendsSettings> {
         onError: (_, e) => FullPageErrorWidget(
           error: e,
           stackTrace: null,
-          prefix: L10n.of(context).unable_to_find_the_available_trend_locations,
+          prefix: (l10n) => l10n.unable_to_find_the_available_trend_locations,
           onRetry: () => model.loadLocations(),
         ),
         onLoading: (_) => const Center(child: CircularProgressIndicator()),
@@ -61,7 +61,9 @@ class _TrendsSettingsState extends State<TrendsSettings> {
                 selected: place.woeid == item.woeid,
                 onTap: () async {
                   await context.read<UserTrendLocationModel>().set(item);
-                  Navigator.pop(context);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
                 });
           }
 

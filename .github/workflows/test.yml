@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone the repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Install and set up Flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           flutter-version-file: .fvmrc
           cache: true
@@ -23,6 +23,9 @@ jobs:
           flutter config --no-analytics
           flutter pub get
 
+      - name: Generate icons
+        uses: ./.github/actions/generate-icons
+
       # lib/generated and lib/oss_licenses.dart are gitignored, so nothing compiles from a fresh
       # checkout until they have been generated.
       - name: Generate the sources
@@ -30,6 +33,9 @@ jobs:
           dart run dart_pubspec_licenses:generate
           dart run intl_utils:generate
           dart run flutter_iconpicker:generate_packs --packs material
+
+      - name: Analyze the sources
+        run: flutter analyze
 
       - name: Run the tests
         run: flutter test --reporter github
